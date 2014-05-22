@@ -18,3 +18,10 @@ $ ./sbt
 > container:start
 > ~;copy-resources;aux-compile
 ```
+
+## Import Into Eclipse
+
+```bash
+$ ./sbt eclipse
+```
+

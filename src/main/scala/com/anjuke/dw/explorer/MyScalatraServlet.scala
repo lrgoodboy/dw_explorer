@@ -13,5 +13,10 @@ class MyScalatraServlet extends DwExplorerStack {
       </body>
     </html>
   }
-  
+
+  get("/hello/dojo") {
+    contentType = "text/html"
+    ssp("hello-dojo", "hello" -> "dojo")
+  }
+
 }

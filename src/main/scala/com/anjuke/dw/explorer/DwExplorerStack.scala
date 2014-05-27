@@ -1,11 +1,14 @@
 package com.anjuke.dw.explorer
 
-import org.scalatra._
-import scalate.ScalateSupport
-import org.fusesource.scalate.{ TemplateEngine, Binding }
+import scala.collection.mutable
+
+import org.fusesource.scalate.TemplateEngine
 import org.fusesource.scalate.layout.DefaultLayoutStrategy
+import org.fusesource.scalate.util.IOUtil
+import org.scalatra.ScalatraServlet
+import org.scalatra.scalate.ScalateSupport
+
 import javax.servlet.http.HttpServletRequest
-import collection.mutable
 
 trait DwExplorerStack extends ScalatraServlet with ScalateSupport {
 
@@ -19,11 +22,10 @@ trait DwExplorerStack extends ScalatraServlet with ScalateSupport {
     engine
   }
   /* end wiring up the precompiled templates */
-  
+
   override protected def templateAttributes(implicit request: HttpServletRequest): mutable.Map[String, Any] = {
     super.templateAttributes ++ mutable.Map.empty // Add extra attributes here, they need bindings in the build file
   }
-  
 
   notFound {
     // remove content type in case it was set through an action
@@ -33,5 +35,16 @@ trait DwExplorerStack extends ScalatraServlet with ScalateSupport {
       contentType = "text/html"
       layoutTemplate(path)
     } orElse serveStaticResource() getOrElse resourceNotFound()
+  }
+
+  get("/webjars/*") {
+    val resourcePath = "/META-INF/resources/webjars/" + params("splat")
+    Option(getClass.getResourceAsStream(resourcePath)) match {
+      case Some(inputStream) => {
+        contentType = servletContext.getMimeType(resourcePath)
+        IOUtil.loadBytes(inputStream)
+      }
+      case None => resourceNotFound()
+    }
   }
 }

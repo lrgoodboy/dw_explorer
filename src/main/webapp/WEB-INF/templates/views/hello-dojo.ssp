@@ -1,0 +1,18 @@
+<%@ var hello: String %>
+
+#set (title)
+Hello, Dojo!
+#end
+
+<div id="greeting"></div>
+
+<script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: true"></script>
+<script type="text/javascript">
+require([
+    'dojo/dom',
+    'dojo/dom-construct'
+], function (dom, domConstruct) {
+    var greetingNode = dom.byId('greeting');
+    domConstruct.place('<i>${hello}</i>', greetingNode);
+});
+</script>

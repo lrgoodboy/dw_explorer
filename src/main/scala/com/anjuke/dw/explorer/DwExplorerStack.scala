@@ -1,16 +1,17 @@
 package com.anjuke.dw.explorer
 
 import scala.collection.mutable
-
 import org.fusesource.scalate.TemplateEngine
 import org.fusesource.scalate.layout.DefaultLayoutStrategy
 import org.fusesource.scalate.util.IOUtil
 import org.scalatra.ScalatraServlet
 import org.scalatra.scalate.ScalateSupport
-
 import javax.servlet.http.HttpServletRequest
+import org.slf4j.LoggerFactory
 
 trait DwExplorerStack extends ScalatraServlet with ScalateSupport {
+
+  val logger = LoggerFactory.getLogger(getClass)
 
   /* wire up the precompiled templates */
   override protected def defaultTemplatePath: List[String] = List("/WEB-INF/templates/views")
@@ -41,8 +42,9 @@ trait DwExplorerStack extends ScalatraServlet with ScalateSupport {
     val resourcePath = "/META-INF/resources/webjars/" + params("splat")
     Option(getClass.getResourceAsStream(resourcePath)) match {
       case Some(inputStream) => {
-        contentType = servletContext.getMimeType(resourcePath)
-        IOUtil.loadBytes(inputStream)
+        response.setContentType(servletContext.getMimeType(resourcePath))
+        IOUtil.copy(inputStream, response.outputStream)
+        Unit
       }
       case None => resourceNotFound()
     }

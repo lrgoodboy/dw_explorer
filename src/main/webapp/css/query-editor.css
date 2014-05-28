@@ -1,0 +1,23 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+#appLayout {
+    height: 100%;
+}
+
+#topCol {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#leftCol {
+    width: 300px;
+}
+
+#bottomCol {
+    height: 300px;
+}

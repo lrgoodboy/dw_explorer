@@ -19,9 +19,9 @@ class MyScalatraServlet extends DwExplorerStack {
     ssp("hello-dojo", "hello" -> "dojo")
   }
 
-  get("/hiveide") {
+  get("/query-editor") {
     contentType = "text/html"
-    ssp("hiveide", "layout" -> "")
+    ssp("query-editor", "layout" -> "")
   }
 
 }

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>DW Explorer 查询编辑器</title>
+<link rel="stylesheet" href="${uri("/css/query-editor.css")}">
+<link rel="stylesheet" href="${uri("/webjars/dojo/1.9.3/dijit/themes/claro/claro.css")}">
+</head>
+<body class="claro">
+
+<div id="appLayout" class="demoLayout" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design: 'headline'">
+
+  <div id="topCol" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'top'">DW Explorer 查询编辑器</div>
+
+  <div id="leftCol" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left', splitter: true">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '我的文档'">My Documents</div>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '元数据'">Metadata</div>
+  </div>
+
+  <div data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'center'">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '新建文档'">
+      <div data-dojo-type="dijit/Editor"></div>
+    </div>
+  </div>
+
+  <div id="bottomCol" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'bottom', splitter: true, layoutPriority: 1">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '任务状态'">Task Status</div>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '查询结果1'">Result1</div>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '查询结果2'">Result2</div>
+  </div>
+
+</div>
+
+<script src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: 1, parseOnLoad: 1"></script>
+<script>
+require(["dojo/parser", "dijit/layout/BorderContainer", "dijit/layout/TabContainer", "dijit/layout/ContentPane", "dijit/Editor"]);
+</script>
+
+</body>
+</html>

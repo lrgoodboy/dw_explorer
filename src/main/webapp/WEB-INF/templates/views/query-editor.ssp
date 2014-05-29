@@ -19,7 +19,7 @@
 
   <div data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'center'">
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '新建文档'">
-      <div data-dojo-type="dijit/Editor" data-dojo-props="plugins: ['undo', 'redo', '|', 'cut', 'copy', 'paste', '|'], extraPlugins: ['runner']"></div>
+      <div data-dojo-type="dijit/Editor" data-dojo-props="plugins: ['undo', 'redo', '|', 'cut', 'copy', 'paste', '|', 'runner']"></div>
     </div>
   </div>
 
@@ -35,7 +35,8 @@
 var dojoConfig = {
     packages: [
         {name: 'explorer', location: '${uri("/js")}'}
-    ]
+    ],
+    contextPath: '${contextPath}'
 };
 </script>
 <script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: true, parseOnLoad: true"></script>

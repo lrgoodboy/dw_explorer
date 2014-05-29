@@ -27,6 +27,8 @@ object DwExplorerBuild extends Build {
         "org.scalatra" %% "scalatra" % ScalatraVersion,
         "org.scalatra" %% "scalatra-scalate" % ScalatraVersion,
         "org.scalatra" %% "scalatra-specs2" % ScalatraVersion % "test",
+        "org.scalatra" %% "scalatra-json" % ScalatraVersion,
+        "org.json4s" %% "json4s-jackson" % "3.2.10",
         "ch.qos.logback" % "logback-classic" % "1.0.6" % "runtime",
         "org.eclipse.jetty" % "jetty-webapp" % JettyVersion % "container",
         "org.eclipse.jetty" % "jetty-plus" % JettyVersion % "container",

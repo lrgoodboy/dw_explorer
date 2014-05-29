@@ -2,9 +2,12 @@ define('explorer/Runner', [
     'dojo/_base/declare',
     'dojo/_base/lang',
     'dojo/_base/array',
+    'dojo/_base/config',
+    'dojo/request',
+    'dojo/json',
     'dijit/_editor/_Plugin',
     'dijit/form/Button'
-], function(declare, lang, array, _Plugin, Button) {
+], function(declare, lang, array, config, request, json, _Plugin, Button) {
 
     var Runner = declare('explorer.Runner', _Plugin, {
 
@@ -53,11 +56,21 @@ define('explorer/Runner', [
         },
 
         _runSelected: function() {
-            console.log('run selected');
+            this._run(this.editor.selection.getSelectedText());
         },
 
         _runAll: function() {
-            console.log('run all');
+            this._run(this.editor.get('value'));
+        },
+
+        _run: function(queries) {
+            request.post(config.contextPath + '/query-editor/api/run', {
+                data: json.stringify({queries: queries}),
+                headers: {'content-type': 'application/json'},
+                handleAs: 'json'
+            }).then(function(result) {
+                console.log(result);
+            });
         }
 
     });

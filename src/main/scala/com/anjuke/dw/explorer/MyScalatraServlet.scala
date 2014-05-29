@@ -1,14 +1,6 @@
 package com.anjuke.dw.explorer
 
-import org.scalatra._
-import scalate.ScalateSupport
-import org.scalatra.json.JacksonJsonSupport
-import org.json4s.Formats
-import org.json4s.DefaultFormats
-
-class MyScalatraServlet extends DwExplorerStack with JacksonJsonSupport {
-
-  protected implicit val jsonFormats: Formats = DefaultFormats
+class MyScalatraServlet extends DwExplorerStack {
 
   get("/") {
     <html>
@@ -23,15 +15,5 @@ class MyScalatraServlet extends DwExplorerStack with JacksonJsonSupport {
     contentType = "text/html"
     ssp("hello-dojo", "hello" -> "dojo")
   }
-
-  get("/query-editor") {
-    contentType = "text/html"
-    ssp("query-editor", "layout" -> "")
-  }
-
-  post("/query-editor/api/run") {
-    contentType = formats("json")
-    Map("status" -> "ok", "queries" -> parsedBody \ "queries")
-  }
-
+  
 }

@@ -42,12 +42,12 @@ var dojoConfig = {
 <script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: true, parseOnLoad: true"></script>
 <script type="text/javascript">
 require([
-    "dojo/parser",
-    "dijit/layout/BorderContainer",
-    "dijit/layout/TabContainer",
-    "dijit/layout/ContentPane",
-    "dijit/Editor",
-    "explorer/Runner"
+    'dojo/parser',
+    'dijit/layout/BorderContainer',
+    'dijit/layout/TabContainer',
+    'dijit/layout/ContentPane',
+    'dijit/Editor',
+    'explorer/Runner'
 ]);
 </script>
 

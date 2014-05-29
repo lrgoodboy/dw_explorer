@@ -31,15 +31,22 @@
 
 </div>
 
-<script src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: 1, parseOnLoad: 1"></script>
-<script>
+<script type="text/javascript">
+var dojoConfig = {
+    packages: [
+        {name: 'explorer', location: '${uri("/js")}'}
+    ]
+};
+</script>
+<script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: true, parseOnLoad: true"></script>
+<script type="text/javascript">
 require([
     "dojo/parser",
     "dijit/layout/BorderContainer",
     "dijit/layout/TabContainer",
     "dijit/layout/ContentPane",
     "dijit/Editor",
-    "${uri("/js/Runner.js")}"
+    "explorer/Runner"
 ]);
 </script>
 

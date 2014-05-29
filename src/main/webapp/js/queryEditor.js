@@ -24,7 +24,13 @@ define('explorer/queryEditor', [
                 headers: {'content-type': 'application/json'},
                 handleAs: 'json'
             }).then(function(result) {
-                console.log(result);
+
+                if (result.status != 'ok') {
+                    alert(result.msg);
+                    return false;
+                }
+
+                console.log(result.id);
             });
         }
 

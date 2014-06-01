@@ -29,33 +29,43 @@ class MyScalatraServlet extends DwExplorerStack with AuthenticationSupport {
   get("/login") {
 
     import dispatch._, Defaults._
+    import org.json4s._, org.json4s.jackson.JsonMethods._
 
-    val accessToken = getParam("access_token")
-    val code = getParam("code")
+    implicit val formats = DefaultFormats
+
+    val accessToken = params.get("access_token")
 
     if (accessToken.nonEmpty) {
-      val authReq = dispatch.url(AUTH_BASE_URL) / "resource.php" <<? Map("oauth_token" -> accessToken.get, "getinfo" -> "1")
-    } else if (code.nonEmpty) {
-      val authReq = dispatch.url(AUTH_BASE_URL) / "token.php" <<? Map("client_id" -> AUTH_CLIENT_ID, "client_secret" -> AUTH_CLIENT_SECRET, "grant_type" -> "authorization_code", "code" -> code.get)
-      logger.info(authReq.url)
-      redirect(authReq.url)
+
+      // fetch user info
+      val authReq = dispatch.url(AUTH_BASE_URL) / "resource.php" << Map("oauth_token" -> accessToken.get, "getinfo" -> "true")
+      logger.info("curl: " + authReq)
+
+      for (result <- Http(authReq OK as.String)) {
+        result
+      }
+
     } else {
 
       // temporary token
-      /*val authReq = dispatch.url(AUTH_BASE_URL) / "authorize.php" << Map("client_id" -> AUTH_CLIENT_ID, "response_type" -> "code", "curl" -> "true")
-      for (result <- dispatch.Http(authReq OK as.String)) {
+      val authReq = dispatch.url(AUTH_BASE_URL) / "authorize.php" << Map("client_id" -> AUTH_CLIENT_ID, "response_type" -> "code", "curl" -> "true")
+      logger.info("curl: " + authReq.url)
 
-      }*/
+      for (result <- Http(authReq OK as.String)) {
 
-      val myRequest = dispatch.url(AUTH_BASE_URL) / "authorize.php" <<? Map("client_id" -> AUTH_CLIENT_ID, "response_type" -> "code")
-      logger.info(myRequest.url)
-      redirect(myRequest.url)
+        // redirect to login page
+        val code = (parse(result) \ "code").extract[String]
+        val authReq2 = dispatch.url(AUTH_BASE_URL) / "token.php" <<? Map("client_id" -> AUTH_CLIENT_ID,
+                                                                         "client_secret" -> AUTH_CLIENT_SECRET,
+                                                                         "grant_type" ->
+                                                                         "authorization_code",
+                                                                         "code" -> code)
+        logger.info("redirect: " + authReq2.url)
+
+        redirect(authReq2.url)
+      }
     }
 
-  }
-
-  def getParam(key: String) = {
-    params.get(key).map(_.trim).filter(!_.isEmpty)
   }
 
 }

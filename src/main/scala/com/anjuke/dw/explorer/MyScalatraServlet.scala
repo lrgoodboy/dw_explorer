@@ -38,32 +38,30 @@ class MyScalatraServlet extends DwExplorerStack with AuthenticationSupport {
     if (accessToken.nonEmpty) {
 
       // fetch user info
-      val authReq = dispatch.url(AUTH_BASE_URL) / "resource.php" << Map("oauth_token" -> accessToken.get, "getinfo" -> "true")
-      logger.info("curl: " + authReq)
+      val resourceReq = dispatch.url(AUTH_BASE_URL) / "resource.php" << Map("oauth_token" -> accessToken.get, "getinfo" -> "true")
+      logger.info("curl: " + resourceReq.url)
 
-      for (result <- Http(authReq OK as.String)) {
-        result
-      }
+      val result = Http(resourceReq OK as.String).map(parse(_))
+      compact(render(result()))
 
     } else {
 
       // temporary token
-      val authReq = dispatch.url(AUTH_BASE_URL) / "authorize.php" << Map("client_id" -> AUTH_CLIENT_ID, "response_type" -> "code", "curl" -> "true")
-      logger.info("curl: " + authReq.url)
+      val authorizeReq = dispatch.url(AUTH_BASE_URL) / "authorize.php" << Map("client_id" -> AUTH_CLIENT_ID, "response_type" -> "code", "curl" -> "true")
+      logger.info("curl: " + authorizeReq.url)
 
-      for (result <- Http(authReq OK as.String)) {
+      val tokenReq = Http(authorizeReq OK as.String).map(result => {
+        val code = ((parse(result) \ "code").extract[String])
+        dispatch.url(AUTH_BASE_URL) / "token.php" <<? Map("client_id" -> AUTH_CLIENT_ID,
+                                                          "client_secret" -> AUTH_CLIENT_SECRET,
+                                                          "grant_type" -> "authorization_code",
+                                                          "code" -> code)
+      })
 
-        // redirect to login page
-        val code = (parse(result) \ "code").extract[String]
-        val authReq2 = dispatch.url(AUTH_BASE_URL) / "token.php" <<? Map("client_id" -> AUTH_CLIENT_ID,
-                                                                         "client_secret" -> AUTH_CLIENT_SECRET,
-                                                                         "grant_type" ->
-                                                                         "authorization_code",
-                                                                         "code" -> code)
-        logger.info("redirect: " + authReq2.url)
+      val redirectUrl = tokenReq().url
+      logger.info("redirect: " + redirectUrl)
+      redirect(redirectUrl)
 
-        redirect(authReq2.url)
-      }
     }
 
   }

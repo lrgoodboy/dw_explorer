@@ -16,58 +16,39 @@ class RememberMeStrategy(protected val app: ScalatraBase)(implicit request: Http
   override def name: String = "RememberMe"
 
   val COOKIE_KEY = "rememberMe"
-  private val oneWeek = 7 * 24 * 3600
+  val COOKIE_EXPIRE = 7 * 24 * 3600
 
-  private def tokenVal = {
-    app.cookies.get(COOKIE_KEY) match {
-      case Some(token) => token
-      case None => ""
-    }
-  }
+  val cookiePath = request.getContextPath
 
   override def isValid(implicit request: HttpServletRequest): Boolean = {
-    val isValid = tokenVal != ""
-    logger.info("determining isValid: " + isValid.toString)
-    tokenVal != ""
+    logger.info("isValid: true")
+    true
   }
 
   def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse) = {
     logger.info("attempting authentication")
-    if (tokenVal == "foobar") Some(User("foo")) else None
+    app.cookies.get(COOKIE_KEY) match {
+      case Some(token) => if (token == "hash:userid") User.lookup(1) else None // TODO store user id in cookie with a signature
+      case None => None
+    }
   }
 
   override def unauthenticated()(implicit request: HttpServletRequest, response: HttpServletResponse) {
-    app.redirect("/sessions/new")
+    app.redirect("/login") // TODO user scentryConfig
   }
 
   override def afterAuthenticate(winningStrategy: String, user: User)(implicit request: HttpServletRequest, response: HttpServletResponse) {
     logger.info("afterAuth fired")
 
-    if (winningStrategy == "RememberMe" ||
-        (winningStrategy == "UserPassword" && checkbox2boolean(app.params.get("rememberMe").getOrElse("").toString))) {
-
-      val token = "foobar"
-      app.cookies.set(COOKIE_KEY, token)(CookieOptions(maxAge = oneWeek, path = "/"))
+    if (winningStrategy != "RememberMe") {
+      val token = "hash:userid"
+      app.cookies.set(COOKIE_KEY, token)(CookieOptions(maxAge = COOKIE_EXPIRE, path = cookiePath))
     }
   }
 
   override def beforeLogout(user: User)(implicit request: HttpServletRequest, response: HttpServletResponse) {
     logger.info("beforeLogout")
-
-    if (user != null) {
-      user.forgetMe
-    }
-    app.cookies.delete(COOKIE_KEY)(CookieOptions(path = "/"))
-  }
-
-  private def checkbox2boolean(s: String): Boolean = {
-    s match {
-      case "yes" => true
-      case "y" => true
-      case "1" => true
-      case "true" => true
-      case _ => false
-    }
+    app.cookies.delete(COOKIE_KEY)(CookieOptions(path = cookiePath))
   }
 
 }

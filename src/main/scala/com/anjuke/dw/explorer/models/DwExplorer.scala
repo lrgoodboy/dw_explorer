@@ -17,13 +17,17 @@ object User {
 
   import DwExplorer._
 
+  private val logger = LoggerFactory.getLogger(getClass)
+
   def lookup(id: Long) = {
+    logger.info("lookup by id")
     inTransaction {
       users.lookup(id)
     }
   }
 
   def lookup(username: String) = {
+    logger.info("lookup by username")
     inTransaction {
       users.where(user => user.username === username).headOption
     }
@@ -41,6 +45,9 @@ object User {
 }
 
 object DwExplorer extends Schema {
+
+  override def tableNameFromClassName(n: String) =
+    NamingConventionTransforms.snakify(n)
 
   override def columnNameFromPropertyName(n: String) =
     NamingConventionTransforms.snakify(n)

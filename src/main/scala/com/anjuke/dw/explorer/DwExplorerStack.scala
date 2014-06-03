@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory
 
 trait DwExplorerStack extends ScalatraServlet with ScalateSupport {
 
-  val logger = LoggerFactory.getLogger(getClass)
+  private val logger = LoggerFactory.getLogger(getClass)
 
   /* wire up the precompiled templates */
   override protected def defaultTemplatePath: List[String] = List("/WEB-INF/templates/views")

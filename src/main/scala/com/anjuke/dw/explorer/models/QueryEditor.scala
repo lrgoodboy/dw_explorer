@@ -13,9 +13,11 @@ class Task(val queries: String,
 
 object Task {
 
+  import QueryEditor._
+
   def create(task: Task): Option[Long] = {
     inTransaction {
-      QueryEditor.tasks.insert(task) match {
+      tasks.insert(task) match {
         case task if task.isPersisted => Some(task.id)
         case _ => None
       }

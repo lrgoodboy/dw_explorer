@@ -36,7 +36,9 @@ object DwExplorerBuild extends Build {
         "org.json4s" %% "json4s-jackson" % "3.2.10",
         "org.squeryl" %% "squeryl" % "0.9.5-6",
         "mysql" % "mysql-connector-java" % "5.1.30",
-        "c3p0" % "c3p0" % "0.9.1.2"
+        "c3p0" % "c3p0" % "0.9.1.2",
+        "org.scalatra" %% "scalatra-auth" % ScalatraVersion,
+        "net.databinder.dispatch" %% "dispatch-core" % "0.11.1"
       ),
       scalateTemplateConfig in Compile <<= (sourceDirectory in Compile){ base =>
         Seq(

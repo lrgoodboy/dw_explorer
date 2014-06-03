@@ -17,7 +17,26 @@ object User {
 
   import DwExplorer._
 
-  def lookup(id: Long) = users.lookup(id)
+  def lookup(id: Long) = {
+    inTransaction {
+      users.lookup(id)
+    }
+  }
+
+  def lookup(username: String) = {
+    inTransaction {
+      users.where(user => user.username === username).headOption
+    }
+  }
+
+  def create(user: User) = {
+    inTransaction {
+      users.insert(user) match {
+        case user if user.isPersisted => Some(user)
+        case _ => None
+      }
+    }
+  }
 
 }
 

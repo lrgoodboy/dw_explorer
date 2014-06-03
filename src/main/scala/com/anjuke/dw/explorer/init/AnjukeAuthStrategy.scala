@@ -5,8 +5,11 @@ import org.scalatra.auth.ScentryStrategy
 import com.anjuke.dw.explorer.models.User
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import org.slf4j.LoggerFactory
-import dispatch._, Defaults._
-import org.json4s._, jackson.JsonMethods._
+import dispatch._
+import dispatch.Defaults._
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
+import java.sql.Timestamp
 
 class AnjukeAuthStrategy(protected val app: ScalatraBase)(implicit request: HttpServletRequest, response: HttpServletResponse)
   extends ScentryStrategy[User] {
@@ -16,10 +19,6 @@ class AnjukeAuthStrategy(protected val app: ScalatraBase)(implicit request: Http
   val AUTH_CLIENT_SECRET = "e331cc2e"
 
   private val logger = LoggerFactory.getLogger(getClass)
-
-  override def isValid(implicit request: HttpServletRequest): Boolean = {
-    request.getPathInfo == "/login"
-  }
 
   implicit val formats = DefaultFormats
 
@@ -36,15 +35,25 @@ class AnjukeAuthStrategy(protected val app: ScalatraBase)(implicit request: Http
         val resourceReq = url(AUTH_BASE_URL) / "resource.php" << Map("oauth_token" -> accessToken, "getinfo" -> "true")
         logger.info("curl: " + resourceReq.url)
 
-        val redirectUrl = Http(resourceReq OK as.String).map(result => {
+        val user = Http(resourceReq OK as.String).map(result => {
+
           val userInfo = parse(result)
+          val username = (userInfo \ "username").extract[String]
 
-          logger.info(compact(userInfo))
+          User.lookup(username) match {
+            case Some(user) => Some(user)
 
-          "/"
+            case None =>
+              logger.info("create user: " + username)
+              val user = new User(username = username,
+                                  truename = (userInfo \ "chinese_name").extract[String],
+                                  email = (userInfo \ "email").extract[String],
+                                  created = new Timestamp(System.currentTimeMillis))
+              User.create(user)
+          }
         })
 
-        app.redirect(redirectUrl())
+        user()
 
       case None =>
 
@@ -67,6 +76,12 @@ class AnjukeAuthStrategy(protected val app: ScalatraBase)(implicit request: Http
 
     }
 
+  }
+
+  override def afterAuthenticate(winningStrategy: String, user: User)(implicit request: HttpServletRequest, response: HttpServletResponse) {
+    logger.info("afterAuth fired")
+//    if (winningStrategy == "AnjukeAuth")
+//      app.redirect("/")
   }
 
   override def unauthenticated()(implicit request: HttpServletRequest, response: HttpServletResponse) {

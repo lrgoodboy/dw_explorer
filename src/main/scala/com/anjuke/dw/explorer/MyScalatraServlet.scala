@@ -9,6 +9,8 @@ class MyScalatraServlet extends DwExplorerStack with AuthenticationSupport {
   val logger = LoggerFactory.getLogger(getClass)
 
   get("/") {
+    requireLogin
+
     <html>
       <body>
         <h1>Hello, world!</h1>
@@ -18,14 +20,21 @@ class MyScalatraServlet extends DwExplorerStack with AuthenticationSupport {
   }
 
   get("/hello/dojo") {
-    requireLogin
-
     contentType = "text/html"
     ssp("hello-dojo", "hello" -> "dojo")
   }
 
   get("/login") {
-    scentry.authenticate()
+    if (!isAuthenticated) {
+      scentry.authenticate("RememberMe")
+    }
+    if (!isAuthenticated) {
+      scentry.authenticate("AnjukeAuth")
+    }
+    if (!isAuthenticated) {
+      halt(403)
+    }
+    redirect("/")
   }
 
 }

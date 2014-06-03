@@ -19,22 +19,16 @@ class RememberMeStrategy(protected val app: ScalatraBase)(implicit request: Http
   val COOKIE_EXPIRE = 7 * 24 * 3600
 
   val cookiePath = request.getContextPath
+  val cookieValue = app.cookies.get(COOKIE_KEY)
 
-  override def isValid(implicit request: HttpServletRequest): Boolean = {
-    logger.info("isValid: true")
-    true
-  }
+  override def isValid(implicit request: HttpServletRequest): Boolean = cookieValue.nonEmpty
 
   def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse) = {
     logger.info("attempting authentication")
-    app.cookies.get(COOKIE_KEY) match {
+    cookieValue match {
       case Some(token) => if (token == "hash:userid") User.lookup(1) else None // TODO store user id in cookie with a signature
       case None => None
     }
-  }
-
-  override def unauthenticated()(implicit request: HttpServletRequest, response: HttpServletResponse) {
-    app.redirect("/login") // TODO user scentryConfig
   }
 
   override def afterAuthenticate(winningStrategy: String, user: User)(implicit request: HttpServletRequest, response: HttpServletResponse) {

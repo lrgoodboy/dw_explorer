@@ -27,7 +27,7 @@ trait AuthenticationSupport extends ScentrySupport[User] {
 
   override protected def configureScentry = {
     scentry.unauthenticated {
-      scentry.strategies("RememberMe").unauthenticated()
+      halt(403)
     }
   }
 

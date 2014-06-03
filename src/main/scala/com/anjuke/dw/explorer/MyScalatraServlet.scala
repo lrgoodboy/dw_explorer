@@ -3,14 +3,13 @@ package com.anjuke.dw.explorer
 import org.slf4j.LoggerFactory
 
 import com.anjuke.dw.explorer.init.AuthenticationSupport
+import com.anjuke.dw.explorer.init.AnjukeAuthStrategy
 
 class MyScalatraServlet extends DwExplorerStack with AuthenticationSupport {
 
   val logger = LoggerFactory.getLogger(getClass)
 
   get("/") {
-    requireLogin
-
     <html>
       <body>
         <h1>Hello, world!</h1>
@@ -20,6 +19,8 @@ class MyScalatraServlet extends DwExplorerStack with AuthenticationSupport {
   }
 
   get("/hello/dojo") {
+    requireLogin
+
     contentType = "text/html"
     ssp("hello-dojo", "hello" -> "dojo")
   }
@@ -34,7 +35,13 @@ class MyScalatraServlet extends DwExplorerStack with AuthenticationSupport {
     if (!isAuthenticated) {
       halt(403)
     }
-    redirect("/")
+    def returnToParam = params.getOrElse(scentryConfig.returnToKey, scentryConfig.returnTo)
+    redirect(request.getAsOrElse(scentryConfig.returnToKey, returnToParam))
+  }
+
+  get("/logout") {
+    scentry.logout()
+    redirect(scentry.strategies("AnjukeAuth").asInstanceOf[AnjukeAuthStrategy].logoutUrl)
   }
 
 }

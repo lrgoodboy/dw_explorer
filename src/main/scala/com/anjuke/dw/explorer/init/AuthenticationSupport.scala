@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import com.anjuke.dw.explorer.models.User
 import org.scalatra.auth.ScentryConfig
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
+import java.net.URLEncoder
 
 trait AuthenticationSupport extends ScentrySupport[User] {
   self: ScalatraBase =>
@@ -15,25 +16,22 @@ trait AuthenticationSupport extends ScentrySupport[User] {
 
   protected val scentryConfig = (new ScentryConfig {
     override val login = "/login"
+    override val returnTo = "/"
+    override val returnToKey = "returnTo"
   }).asInstanceOf[ScentryConfiguration]
 
   private val logger = LoggerFactory.getLogger(getClass)
 
   protected def requireLogin() = {
     if (!isAuthenticated) {
-      redirect(scentryConfig.login)
+      val returnTo = URLEncoder.encode(request.getRequestURL.toString, "UTF-8")
+      redirect(s"${scentryConfig.login}?${scentryConfig.returnToKey}=$returnTo")
     }
   }
 
-  override protected def configureScentry = {
-    scentry.unauthenticated {
-      halt(403)
-    }
-  }
-
-  override protected def registerAuthStrategies = {
-    scentry.register("AnjukeAuth", app => new AnjukeAuthStrategy(app))
-    scentry.register("RememberMe", app => new RememberMeStrategy(app))
+  override protected def registerAuthStrategies() = {
+    scentry.register("AnjukeAuth", app => new AnjukeAuthStrategy(app, scentryConfig))
+    scentry.register("RememberMe", app => new RememberMeStrategy(app, scentryConfig))
   }
 
 }

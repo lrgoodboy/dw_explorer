@@ -8,11 +8,14 @@ import org.slf4j.LoggerFactory
 import dispatch._
 import dispatch.Defaults._
 import org.json4s._
+import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import java.sql.Timestamp
+import org.scalatra.auth.ScentryConfig
 
-class AnjukeAuthStrategy(protected val app: ScalatraBase)(implicit request: HttpServletRequest, response: HttpServletResponse)
-  extends ScentryStrategy[User] {
+class AnjukeAuthStrategy(protected val app: ScalatraBase, protected val scentryConfig: ScentryConfig)
+    (implicit request: HttpServletRequest, response: HttpServletResponse)
+    extends ScentryStrategy[User] {
 
   val AUTH_BASE_URL = "https://auth.corp.anjuke.com"
   val AUTH_CLIENT_ID = "dw_explorer_dev"
@@ -36,6 +39,8 @@ class AnjukeAuthStrategy(protected val app: ScalatraBase)(implicit request: Http
         logger.info("curl: " + resourceReq.url)
 
         val user = Http(resourceReq OK as.String).map(result => {
+
+          logger.info("result: " + result)
 
           val userInfo = parse(result)
           val username = (userInfo \ "username").extract[String]
@@ -64,10 +69,12 @@ class AnjukeAuthStrategy(protected val app: ScalatraBase)(implicit request: Http
         // redirect to oauth
         val tokenReq = Http(authorizeReq OK as.String).map(result => {
           val code = (parse(result) \ "code").extract[String]
+          val returnTo = app.params.getOrElse(scentryConfig.returnToKey, scentryConfig.returnTo)
           url(AUTH_BASE_URL) / "token.php" <<? Map("client_id" -> AUTH_CLIENT_ID,
-                                                            "client_secret" -> AUTH_CLIENT_SECRET,
-                                                            "grant_type" -> "authorization_code",
-                                                            "code" -> code)
+                                                   "client_secret" -> AUTH_CLIENT_SECRET,
+                                                   "grant_type" -> "authorization_code",
+                                                   "code" -> code,
+                                                   "custom" -> returnTo)
         })
 
         val redirectUrl = tokenReq().url
@@ -80,12 +87,19 @@ class AnjukeAuthStrategy(protected val app: ScalatraBase)(implicit request: Http
 
   override def afterAuthenticate(winningStrategy: String, user: User)(implicit request: HttpServletRequest, response: HttpServletResponse) {
     logger.info("afterAuth fired")
-//    if (winningStrategy == "AnjukeAuth")
-//      app.redirect("/")
+
+    if (winningStrategy == name) {
+      val returnTo = app.params.get("custom") match {
+        case Some(custom) => custom
+        case None => scentryConfig.returnTo
+      }
+      request.setAttribute(scentryConfig.returnToKey, returnTo)
+    }
   }
 
-  override def unauthenticated()(implicit request: HttpServletRequest, response: HttpServletResponse) {
-    app.redirect("/login")
+  def logoutUrl() = {
+    val logoutReq = dispatch.url(AUTH_BASE_URL) / "logout.php" <<? Map("client_id" -> AUTH_CLIENT_ID, "client_secret" -> AUTH_CLIENT_SECRET)
+    logoutReq.url
   }
 
 }

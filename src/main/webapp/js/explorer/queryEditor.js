@@ -3,12 +3,43 @@ define('explorer/queryEditor', [
     'dojo/_base/lang',
     'dojo/_base/config',
     'dojo/request',
-    'dojo/json'
-], function(declare, lang, config, request, json) {
+    'dojo/json',
+    'dojo/store/JsonRest',
+    'dojo/store/Observable',
+    'dgrid/OnDemandGrid',
+    'dgrid/Selection',
+    'dgrid/extensions/ColumnResizer',
+    'dojo/domReady!'
+], function(declare, lang, config, request, json, JsonRest, Observable, OnDemandGrid, Selection, ColumnResizer) {
 
     var QueryEditor = declare(null, {
 
         constructor: function() {
+
+            this.initTaskStatus();
+
+        },
+
+        initTaskStatus: function() {
+
+            // store
+            this.taskStore = new JsonRest({
+                target: config.contextPath + '/query-editor/api/task'
+            });
+
+            // grid
+            var CustomGrid = declare([OnDemandGrid, Selection, ColumnResizer]);
+            var grid = new CustomGrid({
+                store: this.taskStore,
+                columns: [
+                    {label: '提交时间', field: 'created'},
+                    {label: '查询语句', field: 'queries'},
+                    {label: '状态', field: 'status'},
+                    {label: '运行时间', field: 'duration'}
+                ],
+                selectionMode: 'single'
+            }, 'gridTaskStatus');
+
         },
 
         submitTask: function(queries) {
@@ -19,19 +50,16 @@ define('explorer/queryEditor', [
                 return false;
             }
 
-            request.post(config.contextPath + '/query-editor/api/task', {
-                data: json.stringify({queries: queries}),
-                headers: {'content-type': 'application/json'},
-                handleAs: 'json'
+            this.taskStore.add({
+                queries: queries
             }).then(function(result) {
-
                 if (result.status != 'ok') {
                     alert(result.msg);
                     return false;
                 }
-
                 console.log(result.id);
             });
+
         }
 
     });

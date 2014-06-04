@@ -34,10 +34,4 @@ trait AuthenticationSupport extends ScentrySupport[User] {
     scentry.register("RememberMe", app => new RememberMeStrategy(app, scentryConfig))
   }
 
-  before() {
-    if (request.getPathInfo() != scentryConfig.login) {
-      requireLogin()
-    }
-  }
-
 }

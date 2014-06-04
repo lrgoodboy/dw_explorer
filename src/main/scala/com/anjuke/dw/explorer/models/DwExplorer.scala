@@ -20,14 +20,12 @@ object User {
   private val logger = LoggerFactory.getLogger(getClass)
 
   def lookup(id: Long) = {
-    logger.info("lookup by id")
     inTransaction {
       users.lookup(id)
     }
   }
 
   def lookup(username: String) = {
-    logger.info("lookup by username")
     inTransaction {
       users.where(user => user.username === username).headOption
     }

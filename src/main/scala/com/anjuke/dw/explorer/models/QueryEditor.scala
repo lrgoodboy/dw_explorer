@@ -1,6 +1,7 @@
 package com.anjuke.dw.explorer.models
 
 import java.sql.Timestamp
+import java.util.Date
 
 import org.squeryl._
 import org.squeryl.dsl._
@@ -10,6 +11,7 @@ class Task(val userId: Long,
            val queries: String,
            val status: Int,
            val progress: Int,
+           val duration: Int,
            val created: Timestamp,
            val updated: Timestamp) extends KeyedEntity[Long] {
   val id: Long = 0
@@ -35,12 +37,41 @@ object Task {
     }
   }
 
+  def findList(userId: Long,
+               status: Option[Int] = None,
+               createdStart: Option[Date] = None,
+               createdEnd: Option[Date] = None,
+               offset: Int = 0,
+               limit: Int = 24): List[Task] = {
+
+    var query = from(tasks)(task =>
+      where(task.userId === userId)
+      select(task)
+      orderBy(task.created desc)
+    ).page(offset, limit );
+
+    if (status.nonEmpty) {
+      query = query.where(task => task.status === status.get)
+    }
+
+    if (createdStart.nonEmpty) {
+      query = query.where(task => task.created >= new Timestamp(createdStart.get.getTime))
+    }
+
+    if (createdEnd.nonEmpty) {
+      query = query.where(task => task.created <= new Timestamp(createdStart.get.getTime))
+    }
+
+    query.toList
+  }
+
 }
 
 class Stmt(val taskId: Long,
            val stmt: String,
            val status: Int,
            val progress: Int,
+           val duration: Int,
            val created: Timestamp,
            val updated: Timestamp) extends KeyedEntity[Long] {
   val id: Long = 0

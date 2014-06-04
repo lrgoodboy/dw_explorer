@@ -23,13 +23,14 @@ define('explorer/queryEditor', [
         initTaskStatus: function() {
 
             // store
-            this.taskStore = new JsonRest({
-                target: config.contextPath + '/query-editor/api/task'
-            });
+            this.taskStore = Observable(JsonRest({
+                target: config.contextPath + '/query-editor/api/task/'
+            }));
 
             // grid
             var CustomGrid = declare([OnDemandGrid, Selection, ColumnResizer]);
             var grid = new CustomGrid({
+                sort: 'created',
                 store: this.taskStore,
                 columns: [
                     {label: '提交时间', field: 'created'},
@@ -39,6 +40,13 @@ define('explorer/queryEditor', [
                 ],
                 selectionMode: 'single'
             }, 'gridTaskStatus');
+
+            var taskStore = this.taskStore;
+            setTimeout(function() {
+                taskStore.get(1).then(function(task) {
+                    taskStore.notify(task, task.id);
+                });
+            }, 3000);
 
         },
 

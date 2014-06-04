@@ -26,7 +26,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     ssp("query-editor/index", "layout" -> "")
   }
 
-  post("/api/task") {
+  post("/api/task/?") {
 
     contentType = formats("json")
 
@@ -65,26 +65,15 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     Task.STATUS_ERROR -> "运行失败"
   )
 
-  get("/api/task") {
-
+  get("/api/task/?") {
     contentType = formats("json")
+    Task.findList(user.id, createdStart = Some(midnight)).map(formatTask _)
+  }
 
-    val dfDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-
-    Task.findList(user.id, createdStart = Some(midnight)).map(task => {
-      Map(
-        "id" -> task.id,
-        "created" -> dfDateTime.format(task.created),
-        "queries" -> task.queries,
-        "status" -> statusMap(task.status),
-        "duration" -> {
-          val dur = if (task.duration > 0) task.duration else {
-            ((System.currentTimeMillis - task.created.getTime()) / 1000).asInstanceOf[Int]
-          }
-          formatDuration(dur)
-        }
-      )
-    })
+  get("/api/task/:id") {
+    contentType = formats("json")
+    val task = Task.lookup(params("id").toLong).get
+    formatTask(task)
   }
 
   private def midnight = {
@@ -101,6 +90,24 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     val minute = duration / 60 % 60
     val second = duration % 60
     f"$hour%02d:$minute%02d:$second%02d"
+  }
+
+  private def formatTask(task: Task) = {
+
+    val dfDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+
+    Map(
+      "id" -> task.id,
+      "created" -> dfDateTime.format(task.created),
+      "queries" -> task.queries,
+      "status" -> statusMap(task.status),
+      "duration" -> {
+        val dur = if (task.duration > 0) task.duration else {
+          ((System.currentTimeMillis - task.created.getTime()) / 1000).asInstanceOf[Int]
+        }
+        formatDuration(dur)
+      }
+    )
   }
 
 }

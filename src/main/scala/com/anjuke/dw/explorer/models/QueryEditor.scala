@@ -28,6 +28,8 @@ object Task {
   val STATUS_OK = 3
   val STATUS_ERROR = 4
 
+  def lookup(id: Long): Option[Task] = tasks.lookup(id)
+
   def create(task: Task): Option[Task] = {
     inTransaction {
       tasks.insert(task) match {
@@ -48,7 +50,7 @@ object Task {
       where(task.userId === userId)
       select(task)
       orderBy(task.created desc)
-    ).page(offset, limit );
+    ).page(offset, limit);
 
     if (status.nonEmpty) {
       query = query.where(task => task.status === status.get)

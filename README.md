@@ -25,3 +25,6 @@ $ ./sbt
 $ ./sbt eclipse
 ```
 
+## TODO
+
+* `./sbt eclipse` make the `src/main/webapps` & `resources` as source folder automatically

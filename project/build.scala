@@ -38,7 +38,8 @@ object DwExplorerBuild extends Build {
         "mysql" % "mysql-connector-java" % "5.1.30",
         "c3p0" % "c3p0" % "0.9.1.2",
         "org.scalatra" %% "scalatra-auth" % ScalatraVersion,
-        "net.databinder.dispatch" %% "dispatch-core" % "0.11.1"
+        "net.databinder.dispatch" %% "dispatch-core" % "0.11.1",
+        "org.webjars" % "dgrid" % "0.3.14"
       ),
       scalateTemplateConfig in Compile <<= (sourceDirectory in Compile){ base =>
         Seq(

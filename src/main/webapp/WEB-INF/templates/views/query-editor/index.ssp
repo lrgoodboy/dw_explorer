@@ -3,8 +3,10 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title>DW Explorer 查询编辑器</title>
-<link rel="stylesheet" href="${uri("/css/query-editor.css")}">
 <link rel="stylesheet" href="${uri("/webjars/dojo/1.9.3/dijit/themes/claro/claro.css")}">
+<link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/dgrid.css")}">
+<link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/skins/claro.css")}">
+<link rel="stylesheet" href="${uri("/css/query-editor.css")}">
 </head>
 <body class="claro">
 
@@ -24,7 +26,9 @@
   </div>
 
   <div id="bottomCol" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'bottom', splitter: true, layoutPriority: 1">
-    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '任务状态'">Task Status</div>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '任务状态'">
+      <div id="gridTaskStatus"></div>
+    </div>
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '查询结果1'">Result1</div>
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '查询结果2'">Result2</div>
   </div>
@@ -34,7 +38,10 @@
 <script type="text/javascript">
 var dojoConfig = {
     packages: [
-        {name: 'explorer', location: '${uri("/js")}'}
+        {name: 'put-selector', location: '${uri("/js/put-selector-0.3.5")}'},
+        {name: 'xstyle', location: '${uri("/js/xstyle-0.1.3")}'},
+        {name: 'dgrid', location: '${uri("/webjars/dgrid/0.3.14")}'},
+        {name: 'explorer', location: '${uri("/js/explorer")}'}
     ],
     contextPath: '${contextPath}'
 };
@@ -42,13 +49,36 @@ var dojoConfig = {
 <script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: true, parseOnLoad: true"></script>
 <script type="text/javascript">
 require([
+    'dojo/_base/declare',
+    'dgrid/List',
+    'dgrid/Grid',
+    'dgrid/Selection',
+    'dgrid/extensions/ColumnResizer',
     'dojo/parser',
     'dijit/layout/BorderContainer',
     'dijit/layout/TabContainer',
     'dijit/layout/ContentPane',
     'dijit/Editor',
-    'explorer/Runner'
-]);
+    'explorer/Runner',
+    'dojo/domReady!'
+], function(declare, List, Grid, Selection, ColumnResizer) {
+  var CustomGrid = declare([Grid, Selection, ColumnResizer]);
+  var data = [
+    {id: 1, queries: 'SELECT * FROM db.tbl', status: '运行中', created: '2014-06-04 10:35:05', duration: '00:25'},
+    {id: 2, queries: 'SELECT * FROM db.tbl', status: '运行成功', created: '2014-06-04 10:25:05', duration: '01:45'}
+  ];
+  var grid = new CustomGrid({
+    columns: {
+      id: "ID",
+      queries: "查询语句",
+      status: "状态",
+      created: "提交时间",
+      duration: "运行时间"
+    },
+    selectionMode: 'single'
+  }, "gridTaskStatus");
+  grid.renderArray(data);
+});
 </script>
 
 </body>

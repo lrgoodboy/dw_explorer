@@ -11,6 +11,7 @@ import akka.actor.ActorRef
 import org.json4s.JsonAST.JString
 import java.util.Calendar
 import java.text.SimpleDateFormat
+import org.scalatra.{BadRequest, InternalServerError}
 
 class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     with JacksonJsonSupport with DatabaseSessionSupport with AuthenticationSupport {
@@ -30,30 +31,24 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
     contentType = formats("json")
 
-    try {
+    val queries = (parsedBody \ "queries").extractOpt[String].map(_.trim).filter(!_.isEmpty) match {
+      case Some(queries) => queries
+      case None => halt(BadRequest("Queries cannot be empty."))
+    }
 
-      val queries = (parsedBody \ "queries").extractOpt[String].map(_.trim).filter(!_.isEmpty) match {
-        case Some(queries) => queries
-        case None => throw new Exception("Queries cannot be empty.")
-      }
-
-      val created = new Timestamp(System.currentTimeMillis())
-      val task = new Task(userId = user.id,
-                          queries = queries,
-                          status = Task.STATUS_NEW,
-                          progress = 0,
-                          duration = 0,
-                          created = created,
-                          updated = created)
-      Task.create(task) match {
-        case Some(task) =>
-          taskActor ! task.id
-          Map("status" -> "ok", "id" -> task.id)
-        case None => throw new Exception("Task submission failed.")
-      }
-
-    } catch {
-      case e: Exception => Map("status" -> "error", "msg" -> e.getMessage())
+    val created = new Timestamp(System.currentTimeMillis())
+    val task = new Task(userId = user.id,
+                        queries = queries,
+                        status = Task.STATUS_NEW,
+                        progress = 0,
+                        duration = 0,
+                        created = created,
+                        updated = created)
+    Task.create(task) match {
+      case Some(task) =>
+        taskActor ! task.id
+        formatTask(task)
+      case None => halt(InternalServerError("Task submission failed."))
     }
 
   }
@@ -67,7 +62,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
   get("/api/task/?") {
     contentType = formats("json")
-    Task.findList(user.id, createdStart = Some(midnight)).map(formatTask _)
+    Task.findList(user.id, status = optInt("status"), createdStart = Some(midnight)).map(formatTask _)
   }
 
   get("/api/task/:id") {
@@ -108,6 +103,14 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
         formatDuration(dur)
       }
     )
+  }
+
+  private def optInt(key: String): Option[Int] = {
+    try {
+      Some(params(key).toInt)
+    } catch  {
+      case e: Exception => None
+    }
   }
 
 }

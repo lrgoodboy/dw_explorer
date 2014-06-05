@@ -6,6 +6,7 @@ import java.util.Date
 import org.squeryl._
 import org.squeryl.dsl._
 import org.squeryl.PrimitiveTypeMode._
+import org.slf4j.LoggerFactory
 
 class Task(val userId: Long,
            val queries: String,
@@ -22,6 +23,8 @@ class Task(val userId: Long,
 object Task {
 
   import QueryEditor._
+
+  private val logger = LoggerFactory.getLogger(getClass)
 
   val STATUS_NEW = 1
   val STATUS_RUNNING = 2
@@ -47,22 +50,15 @@ object Task {
                limit: Int = 24): List[Task] = {
 
     var query = from(tasks)(task =>
-      where(task.userId === userId)
+      where(
+        task.userId === userId and
+        task.status === status.? and
+        task.created >= createdStart.map(date => new Timestamp(date.getTime)).? and
+        task.created <= createdEnd.map(date => new Timestamp(date.getTime)).?
+      )
       select(task)
       orderBy(task.created desc)
     ).page(offset, limit);
-
-    if (status.nonEmpty) {
-      query = query.where(task => task.status === status.get)
-    }
-
-    if (createdStart.nonEmpty) {
-      query = query.where(task => task.created >= new Timestamp(createdStart.get.getTime))
-    }
-
-    if (createdEnd.nonEmpty) {
-      query = query.where(task => task.created <= new Timestamp(createdStart.get.getTime))
-    }
 
     query.toList
   }

@@ -62,7 +62,18 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
   get("/api/task/?") {
     contentType = formats("json")
-    Task.findList(user.id, status = optInt("status"), createdStart = Some(midnight)).map(formatTask _)
+
+    val statusSeq = multiParams.get("status").map(statusSeq => {
+        statusSeq.flatMap(status => {
+          try {
+            Some(status.toInt)
+          } catch {
+            case e: Exception => None
+          }
+        })
+    }).filter(_.nonEmpty)
+
+    Task.findList(user.id, statusSeq = statusSeq, createdStart = Some(midnight)).map(formatTask _)
   }
 
   get("/api/task/:id") {
@@ -103,14 +114,6 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
         formatDuration(dur)
       }
     )
-  }
-
-  private def optInt(key: String): Option[Int] = {
-    try {
-      Some(params(key).toInt)
-    } catch  {
-      case e: Exception => None
-    }
   }
 
 }

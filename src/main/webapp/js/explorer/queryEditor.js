@@ -3,6 +3,9 @@ define('explorer/queryEditor', [
     'dojo/_base/lang',
     'dojo/_base/config',
     'dojo/_base/array',
+    'dojo/query',
+    'dojo/html',
+    'dojo/date/locale',
     'dojo/request',
     'dojo/json',
     'dojo/store/JsonRest',
@@ -11,20 +14,20 @@ define('explorer/queryEditor', [
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
     'dojo/domReady!'
-], function(declare, lang, config, array, request, json, JsonRest, Observable, OnDemandGrid, Selection, ColumnResizer) {
+], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable, OnDemandGrid, Selection, ColumnResizer) {
 
     var QueryEditor = declare(null, {
 
         constructor: function() {
-
-            this.initTaskStatus();
-
+            var self = this;
+            self.initTaskStatus();
         },
 
         initTaskStatus: function() {
+            var self = this;
 
             // store
-            this.taskStore = Observable(JsonRest({
+            self.taskStore = Observable(JsonRest({
                 target: config.contextPath + '/query-editor/api/task/'
             }));
 
@@ -42,11 +45,10 @@ define('explorer/queryEditor', [
                 selectionMode: 'single'
             }, 'gridTaskStatus');
 
-            var taskStore = this.taskStore;
-            setTimeout(function() {
-                taskStore.query({status: 1}).then(function(tasks) {
+            setInterval(function() {
+                self.taskStore.query({status: [1, 2]}).then(function(tasks) {
                     array.forEach(tasks, function(task) {
-                        taskStore.notify(task, task.id);
+                        self.taskStore.notify(task, task.id);
                     }) ;
                 });
             }, 3000);
@@ -54,6 +56,7 @@ define('explorer/queryEditor', [
         },
 
         submitTask: function(queries) {
+            var self = this;
 
             queries = lang.trim(queries);
             if (!queries) {
@@ -61,7 +64,7 @@ define('explorer/queryEditor', [
                 return false;
             }
 
-            this.taskStore.add({
+            self.taskStore.add({
                 queries: queries
             });
 

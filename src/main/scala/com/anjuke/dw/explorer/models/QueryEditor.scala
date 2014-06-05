@@ -30,6 +30,7 @@ object Task {
   val STATUS_RUNNING = 2
   val STATUS_OK = 3
   val STATUS_ERROR = 4
+  val STATUS_DELETED = 99
 
   def lookup(id: Long): Option[Task] = tasks.lookup(id)
 
@@ -43,7 +44,7 @@ object Task {
   }
 
   def findList(userId: Long,
-               status: Option[Int] = None,
+               statusSeq: Option[Seq[Int]] = None,
                createdStart: Option[Date] = None,
                createdEnd: Option[Date] = None,
                offset: Int = 0,
@@ -52,7 +53,7 @@ object Task {
     var query = from(tasks)(task =>
       where(
         task.userId === userId and
-        task.status === status.? and
+        (task.status in statusSeq.getOrElse(Seq(STATUS_NEW, STATUS_RUNNING, STATUS_OK, STATUS_ERROR))) and
         task.created >= createdStart.map(date => new Timestamp(date.getTime)).? and
         task.created <= createdEnd.map(date => new Timestamp(date.getTime)).?
       )

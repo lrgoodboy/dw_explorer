@@ -33,7 +33,11 @@ object Task {
   val STATUS_ERROR = 4
   val STATUS_DELETED = 99
 
-  def lookup(id: Long): Option[Task] = tasks.lookup(id)
+  def lookup(id: Long): Option[Task] = {
+    inTransaction {
+      tasks.lookup(id)
+    }
+  }
 
   def create(task: Task): Option[Task] = {
     inTransaction {
@@ -60,7 +64,7 @@ object Task {
       )
       select(task)
       orderBy(task.created desc)
-    ).page(offset, limit);
+    ).page(offset, limit)
 
     query.toList
   }
@@ -71,11 +75,24 @@ object Task {
         task.userId === userId and
         task.status <> STATUS_DELETED and
         task.created >= new Timestamp(midnight.getTime) and
-        task.updated > updated.map(date => new Timestamp(date.getTime)).?
+        task.updated >= updated.map(date => new Timestamp(date.getTime)).?
       )
       select(task)
       orderBy(task.created desc)
     ).toList
+  }
+
+  def updateStatus(taskId: Long, status: Int, progress: Option[Int] = None, duration: Option[Int] = None) = {
+    inTransaction {
+      update(tasks)(task =>
+        where(task.id === taskId)
+        set(List(
+          Some(task.status := status),
+          progress.map(task.progress := _),
+          duration.map(task.duration := _)
+        ).flatten:_*)
+      )
+    }
   }
 
   private def midnight = {

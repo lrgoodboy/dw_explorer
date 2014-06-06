@@ -10,8 +10,8 @@ import akka.routing.SmallestMailboxRouter
 
 class ScalatraBootstrap extends LifeCycle with DatabaseInit {
 
-  val actorSystem = ActorSystem()
-  val taskActor = actorSystem.actorOf(Props[TaskActor].withRouter(SmallestMailboxRouter(10)))
+  val actorSystem = ActorSystem("queryEditor")
+  val taskActor = actorSystem.actorOf(Props[TaskActor].withRouter(SmallestMailboxRouter(10)), "taskActor")
 
   override def init(context: ServletContext) {
     configureDb()

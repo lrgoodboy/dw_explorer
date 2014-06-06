@@ -2,6 +2,7 @@ package com.anjuke.dw.explorer.models
 
 import java.sql.Timestamp
 import java.util.Date
+import java.util.Calendar
 
 import org.squeryl._
 import org.squeryl.dsl._
@@ -62,6 +63,28 @@ object Task {
     ).page(offset, limit);
 
     query.toList
+  }
+
+  def findToday(userId: Long, updated: Option[Date]) = {
+    from(tasks)(task =>
+      where(
+        task.userId === userId and
+        task.status <> STATUS_DELETED and
+        task.created >= new Timestamp(midnight.getTime) and
+        task.updated > updated.map(date => new Timestamp(date.getTime)).?
+      )
+      select(task)
+      orderBy(task.created desc)
+    ).toList
+  }
+
+  private def midnight = {
+    val calendar = Calendar.getInstance
+    calendar.set(Calendar.HOUR_OF_DAY, 0)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    calendar.getTime
   }
 
 }

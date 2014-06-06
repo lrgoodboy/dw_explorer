@@ -9,7 +9,7 @@ import com.anjuke.dw.explorer.models.Task
 import java.sql.Timestamp
 import akka.actor.ActorRef
 import org.json4s.JsonAST.JString
-import java.util.Calendar
+import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
 import org.scalatra.{BadRequest, InternalServerError}
 
@@ -63,32 +63,24 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   get("/api/task/?") {
     contentType = formats("json")
 
-    val statusSeq = multiParams.get("status").map(statusSeq => {
-        statusSeq.flatMap(status => {
-          try {
-            Some(status.toInt)
-          } catch {
-            case e: Exception => None
-          }
-        })
-    }).filter(_.nonEmpty)
+    val updated = params.get("updated") match {
+      case Some(updated) =>
+        val dfDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+        try {
+          Some(dfDateTime.parse(updated))
+        } catch {
+          case e: Exception => halt(BadRequest("Invalid 'updated' value."))
+        }
+      case None => None
+    }
 
-    Task.findList(user.id, statusSeq = statusSeq, createdStart = Some(midnight)).map(formatTask _)
+    Task.findToday(user.id, updated).map(formatTask _)
   }
 
   get("/api/task/:id") {
     contentType = formats("json")
     val task = Task.lookup(params("id").toLong).get
     formatTask(task)
-  }
-
-  private def midnight = {
-    val calendar = Calendar.getInstance
-    calendar.set(Calendar.HOUR_OF_DAY, 0)
-    calendar.set(Calendar.MINUTE, 0)
-    calendar.set(Calendar.SECOND, 0)
-    calendar.set(Calendar.MILLISECOND, 0)
-    calendar.getTime
   }
 
   private def formatDuration(duration: Int) = {
@@ -101,6 +93,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   private def formatTask(task: Task) = {
 
     val dfDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    val serverTime = dfDateTime.format(new Date)
 
     Map(
       "id" -> task.id,
@@ -108,11 +101,9 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       "queries" -> task.queries,
       "status" -> statusMap(task.status),
       "duration" -> {
-        val dur = if (task.duration > 0) task.duration else {
-          ((System.currentTimeMillis - task.created.getTime()) / 1000).asInstanceOf[Int]
-        }
-        formatDuration(dur)
-      }
+        if (task.duration > 0) formatDuration(task.duration) else "-"
+      },
+      "serverTime" -> serverTime
     )
   }
 

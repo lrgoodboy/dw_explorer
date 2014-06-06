@@ -35,7 +35,7 @@ define('explorer/queryEditor', [
             var CustomGrid = declare([OnDemandGrid, Selection, ColumnResizer]);
             var grid = new CustomGrid({
                 sort: [{attribute: 'created', descending: true}],
-                store: this.taskStore,
+                store: self.taskStore,
                 columns: [
                     {label: '提交时间', field: 'created'},
                     {label: '查询语句', field: 'queries'},
@@ -45,11 +45,24 @@ define('explorer/queryEditor', [
                 selectionMode: 'single'
             }, 'gridTaskStatus');
 
+            var updated = null;
+
             setInterval(function() {
-                self.taskStore.query({status: [1, 2]}).then(function(tasks) {
-                    array.forEach(tasks, function(task) {
-                        self.taskStore.notify(task, task.id);
-                    }) ;
+
+                if (updated == null) {
+                    query('.dgrid-row', grid.domNode).forEach(function(node) {
+                        updated = grid.row(node).data.serverTime;
+                    });
+                }
+
+                var data = {};
+                if (updated != null) {
+                    data['updated'] = updated;
+                }
+
+                self.taskStore.query(data).forEach(function(task) {
+                    self.taskStore.notify(task, task.id);
+                    updated = task.serverTime;
                 });
             }, 3000);
 

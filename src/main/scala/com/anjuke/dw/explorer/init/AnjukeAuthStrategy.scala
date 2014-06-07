@@ -86,9 +86,8 @@ class AnjukeAuthStrategy(protected val app: ScalatraBase, protected val scentryC
   }
 
   override def afterAuthenticate(winningStrategy: String, user: User)(implicit request: HttpServletRequest, response: HttpServletResponse) {
-    logger.info("afterAuth fired")
-
     if (winningStrategy == name) {
+      logger.info("afterAuth fired")
       val returnTo = app.params.get("custom") match {
         case Some(custom) => custom
         case None => scentryConfig.returnTo

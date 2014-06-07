@@ -44,9 +44,8 @@ class RememberMeStrategy(protected val app: ScalatraBase, protected val scentryC
   }
 
   override def afterAuthenticate(winningStrategy: String, user: User)(implicit request: HttpServletRequest, response: HttpServletResponse) {
-    logger.info("afterAuth fired")
-
     if (winningStrategy != name) {
+      logger.info("afterAuth fired")
       val token = s"${user.id}_${hmac(user.id.toString)}"
       app.cookies.set(COOKIE_KEY, token)(CookieOptions(maxAge = COOKIE_EXPIRE, path = cookiePath))
     }

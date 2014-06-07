@@ -2,10 +2,12 @@ package com.anjuke.dw.explorer
 
 import org.slf4j.LoggerFactory
 
+import com.anjuke.dw.explorer.init.DatabaseSessionSupport
 import com.anjuke.dw.explorer.init.AuthenticationSupport
 import com.anjuke.dw.explorer.init.AnjukeAuthStrategy
 
-class MyScalatraServlet extends DwExplorerStack with AuthenticationSupport {
+class MyScalatraServlet extends DwExplorerStack
+    with DatabaseSessionSupport with AuthenticationSupport {
 
   val logger = LoggerFactory.getLogger(getClass)
 

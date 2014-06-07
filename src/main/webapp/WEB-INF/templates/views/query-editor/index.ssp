@@ -49,36 +49,14 @@ var dojoConfig = {
 <script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: true, parseOnLoad: true"></script>
 <script type="text/javascript">
 require([
-    'dojo/_base/declare',
-    'dgrid/List',
-    'dgrid/Grid',
-    'dgrid/Selection',
-    'dgrid/extensions/ColumnResizer',
     'dojo/parser',
     'dijit/layout/BorderContainer',
     'dijit/layout/TabContainer',
     'dijit/layout/ContentPane',
     'dijit/Editor',
     'explorer/Runner',
-    'dojo/domReady!'
-], function(declare, List, Grid, Selection, ColumnResizer) {
-  var CustomGrid = declare([Grid, Selection, ColumnResizer]);
-  var data = [
-    {id: 1, queries: 'SELECT * FROM db.tbl', status: '运行中', created: '2014-06-04 10:35:05', duration: '00:25'},
-    {id: 2, queries: 'SELECT * FROM db.tbl', status: '运行成功', created: '2014-06-04 10:25:05', duration: '01:45'}
-  ];
-  var grid = new CustomGrid({
-    columns: {
-      id: "ID",
-      queries: "查询语句",
-      status: "状态",
-      created: "提交时间",
-      duration: "运行时间"
-    },
-    selectionMode: 'single'
-  }, "gridTaskStatus");
-  grid.renderArray(data);
-});
+    'explorer/queryEditor'
+]);
 </script>
 
 </body>

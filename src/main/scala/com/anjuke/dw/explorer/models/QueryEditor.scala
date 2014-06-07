@@ -75,7 +75,7 @@ object Task {
         task.userId === userId and
         task.status <> STATUS_DELETED and
         task.created >= new Timestamp(midnight.getTime) and
-        task.updated >= updated.map(date => new Timestamp(date.getTime)).?
+        task.updated > updated.map(date => new Timestamp(date.getTime)).?
       )
       select(task)
       orderBy(task.created desc)

@@ -89,7 +89,7 @@ class TaskActor extends Actor {
     })
 
     val remoteTaskId = remoteTaskIdFuture()
-    logger.info("Task submitted, id: " + remoteTaskId)
+    logger.info("Task submitted, remote id: " + remoteTaskId)
 
     // wait for completion
     while (!Thread.interrupted) {

@@ -10,11 +10,13 @@ define('explorer/queryEditor', [
     'dojo/json',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
+    'dijit/registry',
+    'dijit/layout/ContentPane',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable, OnDemandGrid, Selection, ColumnResizer) {
+], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable, registry, ContentPane, OnDemandGrid, Selection, ColumnResizer) {
 
     var QueryEditor = declare(null, {
 
@@ -32,8 +34,8 @@ define('explorer/queryEditor', [
             }));
 
             // grid
-            var CustomGrid = declare([OnDemandGrid, Selection, ColumnResizer]);
-            var grid = new CustomGrid({
+            self.grid = new (declare([OnDemandGrid, Selection, ColumnResizer]))({
+              className: 'dgrid-autoheight',
                 sort: [{attribute: 'created', descending: true}],
                 store: self.taskStore,
                 columns: [
@@ -50,8 +52,11 @@ define('explorer/queryEditor', [
             setInterval(function() {
 
                 if (updated == null) {
-                    query('.dgrid-row', grid.domNode).forEach(function(node) {
-                        updated = grid.row(node).data.serverTime;
+                    query('.dgrid-row', self.grid.domNode).forEach(function(node) {
+                        var task = self.grid.row(node).data;
+                        if (updated == null || task.updated > updated) {
+                            updated = task.updated;
+                        }
                     });
                 }
 
@@ -61,9 +66,26 @@ define('explorer/queryEditor', [
                 }
 
                 self.taskStore.query(data).forEach(function(task) {
+
                     self.taskStore.notify(task, task.id);
-                    updated = task.serverTime;
+
+                    if (updated == null || task.updated > updated) {
+                        updated = task.updated;
+                    }
+
+                    // show result if succeeded
+                    if (task.status == '运行成功') {
+                        request(config.contextPath + '/query-editor/api/task/output/' + task.id).then(function(data) {
+                            var pane = new ContentPane({
+                                title: '查询结果[' + task.id + ']',
+                                content: data
+                            });
+                            registry.byId('bottomCol').addChild(pane);
+                        });
+                    }
+
                 });
+
             }, 3000);
 
         },

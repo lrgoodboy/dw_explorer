@@ -12,6 +12,7 @@ import org.json4s.JsonAST.JString
 import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
 import org.scalatra.{BadRequest, InternalServerError}
+import java.io.File
 
 class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     with JacksonJsonSupport with DatabaseSessionSupport with AuthenticationSupport {
@@ -83,6 +84,10 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     formatTask(task)
   }
 
+  get("/api/task/output/:id") {
+    new File(TaskActor.outputFile(params("id").toLong))
+  }
+
   private def formatDuration(duration: Int) = {
     val hour = duration / 60 / 60
     val minute = duration / 60 % 60
@@ -93,7 +98,6 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   private def formatTask(task: Task) = {
 
     val dfDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-    val serverTime = dfDateTime.format(new Date)
 
     Map(
       "id" -> task.id,
@@ -103,7 +107,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       "duration" -> {
         if (task.duration > 0) formatDuration(task.duration) else "-"
       },
-      "serverTime" -> serverTime
+      "updated" -> dfDateTime.format(task.updated)
     )
   }
 

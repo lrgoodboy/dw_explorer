@@ -29,8 +29,6 @@
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '任务状态'">
       <div id="gridTaskStatus"></div>
     </div>
-    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '查询结果1'">Result1</div>
-    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '查询结果2'">Result2</div>
   </div>
 
 </div>

@@ -10,21 +10,23 @@ define('explorer/queryEditor', [
     'dojo/json',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
-    'dojo/fx/Toggler',
     'dijit/registry',
     'dijit/layout/ContentPane',
+    'dijit/Tree',
+    'dijit/tree/ObjectStoreModel',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
-    'dgrid/tree',
     'put-selector/put',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable, Toggler, registry, ContentPane, OnDemandGrid, Selection, tree, put) {
+], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable, registry, ContentPane, Tree, ObjectStoreModel, OnDemandGrid, Selection, put) {
 
     var QueryEditor = declare(null, {
 
         constructor: function() {
             var self = this;
             self.initTaskStatus();
+            self.initDocument();
+            self.initMetadata();
         },
 
         initTaskStatus: function() {
@@ -97,7 +99,8 @@ define('explorer/queryEditor', [
                         request(config.contextPath + '/query-editor/api/task/output/' + task.id).then(function(data) {
                             var pane = new ContentPane({
                                 title: '查询结果[' + task.id + ']',
-                                content: data
+                                content: data,
+                                closable: true
                             });
                             registry.byId('bottomCol').addChild(pane);
                         });
@@ -122,7 +125,45 @@ define('explorer/queryEditor', [
                 queries: queries
             });
 
-        }
+        },
+
+        initDocument: function() {
+            var self = this;
+
+
+        },
+
+        initMetadata: function() {
+            var self = this;
+
+            var store = new JsonRest({
+                target: config.contextPath + '/query-editor/api/metadata/',
+                getChildren: function(object) {
+                    if (object.children !== true) {
+                        return object.children;
+                    }
+                    return this.get(object.id).then(function(fullObject) {
+                        return fullObject.children;
+                    });
+                }
+            });
+
+            var model = new ObjectStoreModel({
+                store: store,
+                getRoot: function(onItem) {
+                    this.store.get('dw').then(onItem);
+                },
+                mayHaveChildren: function(item) {
+                    return 'children' in item;
+                }
+            });
+
+            self.treeMetadata = new Tree({
+                model: model
+            }, 'treeMetadata');
+        },
+
+        _theEnd: undefined
 
     });
 

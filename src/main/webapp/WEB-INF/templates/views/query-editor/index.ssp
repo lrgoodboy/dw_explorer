@@ -15,8 +15,12 @@
   <div id="topCol" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'top'">DW Explorer 查询编辑器</div>
 
   <div id="leftCol" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left', splitter: true">
-    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '我的文档'">My Documents</div>
-    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '元数据'">Metadata</div>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '我的文档'">
+      <div id="treeDocument"></div>
+    </div>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '元数据'">
+      <div id="treeMetadata"></div>
+    </div>
   </div>
 
   <div data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'center'">

@@ -88,6 +88,31 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     new File(TaskActor.outputFile(params("id").toLong))
   }
 
+  get("/api/metadata/:id") {
+    contentType = formats("json")
+
+    params("id") match {
+      case "dw" =>
+        val databases = List(
+          Map("id" -> "dw_db", "name" -> "dw_db", "children" -> true),
+          Map("id" -> "dw_stage", "name" -> "dw_stage", "children" -> true),
+          Map("id" -> "dw_extract", "name" -> "dw_extract", "children" -> true),
+          Map("id" -> "dw_db_temp", "name" -> "dw_db_temp", "children" -> true),
+          Map("id" -> "dw_db_test", "name" -> "dw_db_test", "children" -> true)
+        )
+        Map("id" -> "dw", "name" -> "Data Warehouse", "children" -> databases)
+
+      case "dw_db" =>
+        val tables = List(
+          Map("id" -> "dw_db.dw_soj_imp_dtl", "name" -> "dw_soj_imp_dtl"),
+          Map("id" -> "dw_db.dw_soj_imp_dtl_npv", "name" -> "dw_soj_imp_dtl_npv")
+        )
+        Map("id" -> "dw_db", "name" -> "dw_db", "children" -> tables)
+
+      case _ => Nil
+    }
+  }
+
   private def formatDuration(duration: Int) = {
     val hour = duration / 60 / 60
     val minute = duration / 60 % 60

@@ -103,6 +103,9 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       "id" -> task.id,
       "created" -> dfDateTime.format(task.created),
       "queries" -> task.queries,
+      "queriesBrief" -> {
+        if (task.queries.length > 100) task.queries.substring(0, 100) else task.queries
+      },
       "status" -> statusMap(task.status),
       "duration" -> {
         if (task.duration > 0) formatDuration(task.duration) else "-"

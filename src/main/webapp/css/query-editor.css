@@ -21,3 +21,29 @@ html, body {
 #bottomCol {
     height: 200px;
 }
+
+#gridTaskStatus .field-id {
+    width: 80px;
+}
+
+#gridTaskStatus .field-created {
+    width: 180px;
+}
+
+#gridTaskStatus .field-status {
+    width: 100px;
+}
+
+#gridTaskStatus .field-duration {
+    width: 100px;
+}
+
+#gridTaskStatus .expando {
+    background: white;
+    padding: 5px;
+    border: 1px solid silver;
+}
+
+#gridTaskStatus .collapsed .expando {
+    display: none;
+}

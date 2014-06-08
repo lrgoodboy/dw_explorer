@@ -10,13 +10,15 @@ define('explorer/queryEditor', [
     'dojo/json',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
+    'dojo/fx/Toggler',
     'dijit/registry',
     'dijit/layout/ContentPane',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
-    'dgrid/extensions/ColumnResizer',
+    'dgrid/tree',
+    'put-selector/put',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable, registry, ContentPane, OnDemandGrid, Selection, ColumnResizer) {
+], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable, Toggler, registry, ContentPane, OnDemandGrid, Selection, tree, put) {
 
     var QueryEditor = declare(null, {
 
@@ -34,18 +36,35 @@ define('explorer/queryEditor', [
             }));
 
             // grid
-            self.grid = new (declare([OnDemandGrid, Selection, ColumnResizer]))({
-              className: 'dgrid-autoheight',
-                sort: [{attribute: 'created', descending: true}],
+            var CustomGrid = declare([OnDemandGrid, Selection]);
+            self.grid = new CustomGrid({
+                className: 'dgrid-autoheight',
+                sort: [{attribute: 'id', descending: true}],
                 store: self.taskStore,
                 columns: [
-                    {label: '提交时间', field: 'created'},
-                    {label: '查询语句', field: 'queries'},
-                    {label: '状态', field: 'status'},
-                    {label: '运行时间', field: 'duration'}
+                    {label: 'ID', field: 'id', sortable: false},
+                    {label: '查询语句', field: 'queriesBrief', sortable: false},
+                    {label: '创建时间', field: 'created', sortable: false},
+                    {label: '状态', field: 'status', sortable: false},
+                    {label: '运行时间', field: 'duration', sortable: false}
                 ],
-                selectionMode: 'single'
+                selectionMode: 'single',
+                renderRow: function(object, options) {
+                    var div = put('div.collapsed', CustomGrid.prototype.renderRow.apply(this, arguments)),
+                        expando = put(div, 'div.expando', {innerHTML: object.queries.replace(/\n/g, '<br>')});
+                    return div;
+                }
             }, 'gridTaskStatus');
+
+            // https://github.com/SitePen/dgrid/blob/v0.3.15/demos/multiview/multiview.js
+            var expandedNode;
+            self.grid.on('.dgrid-row:click', function(evt) {
+                var node = self.grid.row(evt).element,
+                    collapsed = node.className.indexOf('collapsed') >= 0;
+                put(node, (collapsed ? '!' : '.') + 'collapsed');
+                collapsed && expandedNode && put(expandedNode, '.collapsed');
+                expandedNode = collapsed ? node : null;
+            });
 
             var updated = null;
 

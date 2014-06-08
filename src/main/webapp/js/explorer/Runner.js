@@ -61,7 +61,8 @@ define('explorer/Runner', [
         },
 
         _runAll: function() {
-            queryEditor.submitTask(this.editor.get('value'));
+            this.editor.execCommand('selectAll');
+            this._runSelected();
         }
 
     });

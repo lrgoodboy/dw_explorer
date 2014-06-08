@@ -78,7 +78,7 @@ object Task {
         task.updated > updated.map(date => new Timestamp(date.getTime)).?
       )
       select(task)
-      orderBy(task.created desc)
+      orderBy(task.id desc)
     ).toList
   }
 

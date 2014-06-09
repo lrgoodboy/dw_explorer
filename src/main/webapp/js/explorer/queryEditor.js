@@ -14,11 +14,13 @@ define('explorer/queryEditor', [
     'dijit/layout/ContentPane',
     'dijit/Tree',
     'dijit/tree/ObjectStoreModel',
+    'dijit/Editor',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'put-selector/put',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable, registry, ContentPane, Tree, ObjectStoreModel, OnDemandGrid, Selection, put) {
+], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable,
+            registry, ContentPane, Tree, ObjectStoreModel, Editor, OnDemandGrid, Selection, put) {
 
     var QueryEditor = declare(null, {
 
@@ -153,7 +155,40 @@ define('explorer/queryEditor', [
             });
 
             self.treeDoc = new Tree({
-                model: model
+                model: model,
+                onDblClick: function(item) {
+
+                    if (item.children !== false) {
+                        return;
+                    }
+
+                    var central = registry.byId('central');
+                    var paneId = 'editorPane_' + item.id;
+                    var pane = registry.byId(paneId);
+
+                    if (typeof pane != 'undefined') {
+                        central.selectChild(pane);
+                        return;
+                    }
+
+                    this.model.store.get(item.id).then(function(object) {
+
+                        var pane = new ContentPane({
+                            id: paneId,
+                            title: object.name,
+                            closable: true
+                        });
+
+                        var editor = new Editor({
+                            plugins: ['undo', 'redo', '|', 'cut', 'copy', 'paste', '|', 'runner'],
+                            value: object.content
+                        });
+
+                        pane.addChild(editor);
+                        central.addChild(pane);
+                        central.selectChild(pane);
+                    });
+                }
             }, 'treeDoc');
         },
 

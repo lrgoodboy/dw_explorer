@@ -146,6 +146,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
             Map(
               "id" -> doc.id,
               "name" -> doc.filename,
+              "content" -> doc.content,
               "children" -> docs
             )
 

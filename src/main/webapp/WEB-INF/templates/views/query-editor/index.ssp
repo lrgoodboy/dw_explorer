@@ -23,11 +23,7 @@
     </div>
   </div>
 
-  <div data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'center'">
-    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '新建文档'">
-      <div data-dojo-type="dijit/Editor" data-dojo-props="plugins: ['undo', 'redo', '|', 'cut', 'copy', 'paste', '|', 'runner']"></div>
-    </div>
-  </div>
+  <div id="central" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'center'"></div>
 
   <div id="bottomCol" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'bottom', splitter: true, layoutPriority: 1">
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '任务状态'">
@@ -55,7 +51,6 @@ require([
     'dijit/layout/BorderContainer',
     'dijit/layout/TabContainer',
     'dijit/layout/ContentPane',
-    'dijit/Editor',
     'explorer/Runner',
     'explorer/queryEditor'
 ]);

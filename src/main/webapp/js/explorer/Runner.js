@@ -12,10 +12,10 @@ define('explorer/Runner', [
 
     var Runner = declare('explorer.Runner', _Plugin, {
 
-        buttonGroup: [],
-
         _initButtonGroup: function() {
             var editor = this.editor;
+
+            this.buttonGroup = [];
 
             var props = {
                 showLabel: true,

@@ -130,7 +130,31 @@ define('explorer/queryEditor', [
         initDocument: function() {
             var self = this;
 
+            var store = new JsonRest({
+                target: config.contextPath + '/query-editor/api/doc/',
+                getChildren: function(object) {
+                    if (object.children !== true) {
+                        return object.children;
+                    }
+                    return this.get(object.id).then(function(fullObject) {
+                        return fullObject.children;
+                    });
+                }
+            });
 
+            var model = new ObjectStoreModel({
+                store: store,
+                getRoot: function(onItem) {
+                    this.store.get('root').then(onItem);
+                },
+                mayHaveChildren: function(item) {
+                    return item.children !== false;
+                }
+            });
+
+            self.treeDoc = new Tree({
+                model: model
+            }, 'treeDoc');
         },
 
         initMetadata: function() {
@@ -151,7 +175,7 @@ define('explorer/queryEditor', [
             var model = new ObjectStoreModel({
                 store: store,
                 getRoot: function(onItem) {
-                    this.store.get('dw').then(onItem);
+                    this.store.get('root').then(onItem);
                 },
                 mayHaveChildren: function(item) {
                     return 'children' in item;

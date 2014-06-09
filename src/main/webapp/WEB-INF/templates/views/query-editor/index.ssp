@@ -16,7 +16,7 @@
 
   <div id="leftCol" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left', splitter: true">
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '我的文档'">
-      <div id="treeDocument"></div>
+      <div id="treeDoc"></div>
     </div>
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '元数据'">
       <div id="treeMetadata"></div>

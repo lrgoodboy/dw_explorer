@@ -5,13 +5,13 @@ import org.scalatra.json.JacksonJsonSupport
 import org.json4s.DefaultFormats
 import com.anjuke.dw.explorer.init.DatabaseSessionSupport
 import com.anjuke.dw.explorer.init.AuthenticationSupport
-import com.anjuke.dw.explorer.models.Task
+import com.anjuke.dw.explorer.models.{Task, Doc}
 import java.sql.Timestamp
 import akka.actor.ActorRef
 import org.json4s.JsonAST.JString
 import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
-import org.scalatra.{BadRequest, InternalServerError}
+import org.scalatra.{BadRequest, InternalServerError, NotFound}
 import java.io.File
 
 class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
@@ -92,7 +92,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     contentType = formats("json")
 
     params("id") match {
-      case "dw" =>
+      case "root" =>
         val databases = List(
           Map("id" -> "dw_db", "name" -> "dw_db", "children" -> true),
           Map("id" -> "dw_stage", "name" -> "dw_stage", "children" -> true),
@@ -100,7 +100,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
           Map("id" -> "dw_db_temp", "name" -> "dw_db_temp", "children" -> true),
           Map("id" -> "dw_db_test", "name" -> "dw_db_test", "children" -> true)
         )
-        Map("id" -> "dw", "name" -> "Data Warehouse", "children" -> databases)
+        Map("id" -> "root", "name" -> "Data Warehouse", "children" -> databases)
 
       case "dw_db" =>
         val tables = List(
@@ -110,6 +110,47 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
         Map("id" -> "dw_db", "name" -> "dw_db", "children" -> tables)
 
       case _ => Nil
+    }
+  }
+
+  get("/api/doc/:id") {
+    contentType = formats("json")
+
+    params("id") match {
+      case "root" =>
+
+        val docs = Doc.findByUser(user.id).map(doc => {
+          Map(
+            "id" -> doc.id,
+            "name" -> doc.filename,
+            "children" -> doc.isFolder
+          )
+        })
+
+        Map(
+          "id" -> 0,
+          "name" -> "My Documents",
+          "children" -> docs
+        )
+
+      case id =>
+        Doc.lookup(id.toLong) match {
+          case Some(doc) =>
+            val docs = Doc.findByParent(user.id, doc.id).map(doc => {
+              Map(
+                "id" -> doc.id,
+                "name" -> doc.filename,
+                "children" -> doc.isFolder
+              )
+            })
+            Map(
+              "id" -> doc.id,
+              "name" -> doc.filename,
+              "children" -> docs
+            )
+
+          case None => halt(NotFound())
+        }
     }
   }
 

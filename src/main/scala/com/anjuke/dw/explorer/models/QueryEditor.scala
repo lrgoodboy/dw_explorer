@@ -138,6 +138,55 @@ object Stmt {
 
 }
 
+class Doc(val userId: Long,
+          val parentId: Long,
+          val isFolder: Boolean,
+          val filename: String,
+          val content: String,
+          val isDeleted: Boolean,
+          val created: Timestamp,
+          val updated: Timestamp) extends KeyedEntity[Long] {
+  val id: Long = 0;
+}
+
+object Doc {
+
+  import QueryEditor._
+
+  def create(doc: Doc): Option[Doc] = {
+    inTransaction {
+      docs.insert(doc) match {
+        case doc if doc.isPersisted => Some(doc)
+        case _ => None
+      }
+    }
+  }
+
+  def lookup(id: Long) = {
+    inTransaction {
+      docs.lookup(id)
+    }
+  }
+
+  def findByUser(userId: Long) = findByParent(userId, 0)
+
+  def findByParent(userId: Long, parentId: Long) = {
+    inTransaction {
+      from(docs)(doc =>
+        where(
+          doc.userId === userId and
+          doc.parentId === parentId and
+          doc.isDeleted === false
+        )
+        select(doc)
+        orderBy(doc.isFolder desc, doc.filename asc)
+      ).toList
+    }
+  }
+
+}
+
+
 object QueryEditor extends Schema {
 
   override def tableNameFromClassName(n: String) =
@@ -151,5 +200,7 @@ object QueryEditor extends Schema {
   val stmts = table[Stmt]
 
   val taskToStmts = oneToManyRelation(tasks, stmts).via((task, stmt) => task.id === stmt.taskId)
+
+  val docs = table[Doc]
 
 }

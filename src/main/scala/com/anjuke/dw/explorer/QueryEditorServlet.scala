@@ -85,7 +85,17 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   }
 
   get("/api/task/output/:id") {
-    new File(TaskActor.outputFile(params("id").toLong))
+    new File(TaskActor.outputFile(params("id").toLong)) match {
+      case file if file.exists => file
+      case _ => halt(NotFound())
+    }
+  }
+
+    get("/api/task/error/:id") {
+    new File(TaskActor.errorFile(params("id").toLong)) match {
+      case file if file.exists => file
+      case _ => halt(NotFound())
+    }
   }
 
   get("/api/metadata/:id") {

@@ -8,6 +8,7 @@ define('explorer/queryEditor', [
     'dojo/date/locale',
     'dojo/request',
     'dojo/json',
+    'dojo/store/Memory',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
     'dijit/registry',
@@ -17,13 +18,15 @@ define('explorer/queryEditor', [
     'dijit/Editor',
     'dijit/Menu',
     'dijit/MenuItem',
+    'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
+    'dgrid/extensions/ColumnResizer',
     'put-selector/put',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable,
+], function(declare, lang, config, array, query, html, date, request, json, Memory, JsonRest, Observable,
             registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem,
-            OnDemandGrid, Selection, put) {
+            Grid, OnDemandGrid, Selection, ColumnResizer, put) {
 
     var QueryEditor = declare(null, {
 
@@ -45,7 +48,7 @@ define('explorer/queryEditor', [
             // grid
             var CustomGrid = declare([OnDemandGrid, Selection]);
             self.grid = new CustomGrid({
-                className: 'dgrid-autoheight',
+                className: 'dgrid-autoheight grid-task-status',
                 sort: [{attribute: 'id', descending: true}],
                 store: self.taskStore,
                 columns: [
@@ -137,15 +140,102 @@ define('explorer/queryEditor', [
         showResult: function(task) {
             var self = this;
 
-            if (task.status == '运行成功') {
-                request(config.contextPath + '/query-editor/api/task/output/' + task.id).then(function(data) {
-                    var pane = new ContentPane({
-                        title: '查询结果[' + task.id + ']',
-                        content: data,
-                        closable: true
-                    });
-                    registry.byId('bottomCol').addChild(pane);
+            var showError;
+
+            switch (task.status) {
+            case '运行成功':
+                showError = false;
+                break;
+            case '运行失败':
+                showError = true;
+                break;
+            default:
+                return;
+            }
+
+            var pane = new ContentPane({
+                title: '运行结果[' + task.id + ']',
+                closable: true
+            });
+
+            var gridStatus = new Grid({
+                className: 'dgrid-autoheight grid-task-status',
+                columns: [
+                    {label: 'ID', field: 'id', sortable: false},
+                    {label: '查询语句', field: 'queriesBrief', sortable: false},
+                    {label: '创建时间', field: 'created', sortable: false},
+                    {label: '状态', field: 'status', sortable: false},
+                    {label: '运行时间', field: 'duration', sortable: false}
+                ],
+                renderRow: function(object, options) {
+                    var div = put('div.collapsed', Grid.prototype.renderRow.apply(this, arguments)),
+                        expando = put(div, 'div.expando', {innerHTML: object.queries.replace(/\n/g, '<br>')});
+                    return div;
+                }
+            });
+
+            gridStatus.on('.dgrid-row:click', function(evt) {
+                var node = gridStatus.row(evt).element,
+                    collapsed = node.className.indexOf('collapsed') >= 0;
+                put(node, (collapsed ? '!' : '.') + 'collapsed');
+            });
+
+            gridStatus.renderArray([task]);
+
+            pane.addChild(gridStatus);
+
+            var bottomCol = registry.byId('bottomCol');
+            bottomCol.addChild(pane);
+            bottomCol.selectChild(pane);
+
+            if (showError) {
+
+                request(config.contextPath + '/query-editor/api/task/error/' + task.id).then(function(data) {
+                    put(pane.domNode, 'div.task-error-header', '错误日志');
+                    put(pane.domNode, 'pre', data);
                 });
+
+            } else {
+
+                request(config.contextPath + '/query-editor/api/task/output/' + task.id).then(function(data) {
+
+                    if (!data) {
+                        put(pane.domNode, 'div.task-error-header', '未返回结果');
+                        return;
+                    }
+
+                    var lines = data.split(/\n/);
+                    var columns = [];
+                    array.forEach(lines.shift().split(/\t/), function(column) {
+                         columns.push({
+                             label: column,
+                             field: column
+                         });
+                    });
+
+                    var data = [];
+                    array.forEach(lines, function(line, id) {
+                        var row = {};
+                        array.forEach(line.split(/\t/), function(columnData, columnIndex) {
+                            if (columnIndex > columns.length - 1) {
+                                return;
+                            }
+                            row[columns[columnIndex].field] = columnData;
+                        });
+                        data.push(row);
+                    });
+
+                    console.log(data);
+
+                    var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
+                        store: new Memory({data: data}),
+                        className: 'dgrid-autoheight',
+                        columns: columns
+                    });
+
+                    pane.addChild(gridOutput);
+                });
+
             }
         },
 

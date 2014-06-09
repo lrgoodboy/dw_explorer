@@ -22,28 +22,37 @@ html, body {
     height: 200px;
 }
 
-#gridTaskStatus .field-id {
+.grid-task-status {
+    margin-bottom: 15px;
+}
+
+.grid-task-status .field-id {
     width: 80px;
 }
 
-#gridTaskStatus .field-created {
+.grid-task-status .field-created {
     width: 180px;
 }
 
-#gridTaskStatus .field-status {
+.grid-task-status .field-status {
     width: 100px;
 }
 
-#gridTaskStatus .field-duration {
+.grid-task-status .field-duration {
     width: 100px;
 }
 
-#gridTaskStatus .expando {
+.grid-task-status .expando {
     background: white;
     padding: 5px;
     border: 1px solid silver;
 }
 
-#gridTaskStatus .collapsed .expando {
+.grid-task-status .collapsed .expando {
     display: none;
+}
+
+.task-error-header {
+    font-weight: bold;
+    font-size: 15px;
 }

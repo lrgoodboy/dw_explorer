@@ -56,7 +56,7 @@ class TaskActor extends Actor {
     Task.updateStatus(task.id, Task.STATUS_RUNNING)
 
     try {
-      execute(task.id, task.queries)
+      execute(task.id, "SET hive.cli.print.header = true;\n" + task.queries)
       Task.updateStatus(task.id, Task.STATUS_OK, duration = Some(calcDuration(task.created)))
       logger.info(s"Task ${task.id} finished.")
     } catch {

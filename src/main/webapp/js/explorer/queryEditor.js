@@ -15,12 +15,15 @@ define('explorer/queryEditor', [
     'dijit/Tree',
     'dijit/tree/ObjectStoreModel',
     'dijit/Editor',
+    'dijit/Menu',
+    'dijit/MenuItem',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'put-selector/put',
     'dojo/domReady!'
 ], function(declare, lang, config, array, query, html, date, request, json, JsonRest, Observable,
-            registry, ContentPane, Tree, ObjectStoreModel, Editor, OnDemandGrid, Selection, put) {
+            registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem,
+            OnDemandGrid, Selection, put) {
 
     var QueryEditor = declare(null, {
 
@@ -70,6 +73,34 @@ define('explorer/queryEditor', [
                 expandedNode = collapsed ? node : null;
             });
 
+            // context menu
+            function getSelectedTask() {
+                var task = null;
+                for (var id in self.grid.selection) {
+                    if (self.grid.selection[id]) {
+                        task = self.grid.row(id).data;
+                        break;
+                    }
+                }
+                return task;
+            }
+
+            var menu = new Menu({
+                targetNodeIds: [self.grid.domNode]
+            });
+            menu.addChild(new MenuItem({
+                label: '查看结果',
+                onClick: function() {
+                    self.showResult(getSelectedTask());
+                }
+            }));
+            menu.addChild(new MenuItem({
+                label: '取消任务'
+            }));
+            menu.addChild(new MenuItem({
+                label: '删除任务'
+            }));
+
             var updated = null;
 
             setInterval(function() {
@@ -96,22 +127,26 @@ define('explorer/queryEditor', [
                         updated = task.updated;
                     }
 
-                    // show result if succeeded
-                    if (task.status == '运行成功') {
-                        request(config.contextPath + '/query-editor/api/task/output/' + task.id).then(function(data) {
-                            var pane = new ContentPane({
-                                title: '查询结果[' + task.id + ']',
-                                content: data,
-                                closable: true
-                            });
-                            registry.byId('bottomCol').addChild(pane);
-                        });
-                    }
-
+                    self.showResult(task);
                 });
 
             }, 3000);
 
+        },
+
+        showResult: function(task) {
+            var self = this;
+
+            if (task.status == '运行成功') {
+                request(config.contextPath + '/query-editor/api/task/output/' + task.id).then(function(data) {
+                    var pane = new ContentPane({
+                        title: '查询结果[' + task.id + ']',
+                        content: data,
+                        closable: true
+                    });
+                    registry.byId('bottomCol').addChild(pane);
+                });
+            }
         },
 
         submitTask: function(queries) {

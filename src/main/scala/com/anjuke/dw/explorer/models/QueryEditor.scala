@@ -184,6 +184,19 @@ object Doc {
     }
   }
 
+  def updatePartial(id: Long, filename: Option[String] = None, content: Option[String] = None, isDeleted: Option[Boolean] = None) = {
+    inTransaction {
+      update(docs)(doc =>
+        where(doc.id === id)
+        set(List(
+          filename.map(doc.filename := _),
+          content.map(doc.content := _),
+          isDeleted.map(doc.isDeleted := _)
+        ).flatten:_*)
+      )
+    }
+  }
+
 }
 
 

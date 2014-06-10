@@ -129,41 +129,119 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     params("id") match {
       case "root" =>
 
-        val docs = Doc.findByUser(user.id).map(doc => {
+        val children = Doc.findByUser(user.id).map(child => {
           Map(
-            "id" -> doc.id,
-            "name" -> doc.filename,
-            "children" -> doc.isFolder
+            "id" -> child.id,
+            "parent" -> 0,
+            "name" -> child.filename,
+            "children" -> child.isFolder
           )
         })
 
         Map(
           "id" -> 0,
           "name" -> "My Documents",
-          "children" -> docs
+          "children" -> children
         )
 
       case id =>
         Doc.lookup(id.toLong) match {
-          case Some(doc) =>
-            val docs = Doc.findByParent(user.id, doc.id).map(doc => {
+          case Some(parent) =>
+            val children = Doc.findByParent(user.id, parent.id).map(child => {
               Map(
-                "id" -> doc.id,
-                "name" -> doc.filename,
-                "children" -> doc.isFolder
+                "id" -> child.id,
+                "parent" -> parent.id,
+                "name" -> child.filename,
+                "children" -> child.isFolder
               )
             })
             Map(
-              "id" -> doc.id,
-              "name" -> doc.filename,
-              "content" -> doc.content,
-              "children" -> docs
+              "id" -> parent.id,
+              "name" -> parent.filename,
+              "content" -> parent.content,
+              "children" -> children
             )
 
           case None => halt(NotFound())
         }
     }
   }
+
+  post("/api/doc/?") {
+    contentType = formats("json")
+
+    def newDoc(parentId: Long) = new Doc(
+      userId = user.id,
+      parentId = parentId,
+      isFolder = (parsedBody \ "isFolder").extract[Boolean],
+      filename = (parsedBody \ "filename").extract[String],
+      content = (parsedBody \ "content").extract[String],
+      isDeleted = false,
+      created = currentTimestamp,
+      updated = currentTimestamp
+    )
+
+    val child = (parsedBody \ "parent").extract[Long] match {
+      case 0 => newDoc(0)
+      case parentId =>
+        Doc.lookup(parentId) match {
+          case Some(parent) if (parent.userId == user.id && parent.isDeleted == false) =>
+            newDoc(parent.id)
+          case _ => halt(NotFound())
+        }
+    }
+
+    Doc.create(child) match {
+      case Some(child) =>
+        Map(
+          "id" -> child.id,
+          "parent" -> child.parentId,
+          "name" -> child.filename,
+          "content" -> child.content,
+          "children" -> child.isFolder
+        )
+
+      case None => halt(InternalServerError("Fail to create doc."))
+    }
+  }
+
+  put("/api/doc/:id") {
+    contentType = formats("json")
+
+    Doc.lookup(params("id").toLong) match {
+      case Some(doc) if (doc.userId == user.id && doc.isDeleted == false) =>
+        Doc.updatePartial(id = doc.id,
+                          filename = (parsedBody \ "filename").extractOpt[String],
+                          content = (parsedBody \ "content").extractOpt[String])
+
+        Unit
+
+        /*val newDoc = Doc.lookup(doc.id).get
+        Map(
+          "id" -> newDoc.id,
+          "parent" -> newDoc.parentId,
+          "name" -> newDoc.filename,
+          "content" -> newDoc.content,
+          "children" -> newDoc.isFolder
+        )*/
+
+      case _ => halt(BadRequest())
+    }
+  }
+
+  delete("/api/doc/:id") {
+    contentType = formats("json")
+
+    Doc.lookup(params("id").toLong) match {
+      case Some(doc) if (doc.userId == user.id && doc.isDeleted == false) =>
+        Doc.updatePartial(id = doc.id, isDeleted = Some(true))
+        Unit
+
+      case _ => halt(BadRequest())
+    }
+  }
+
+  private def currentTimestamp = new Timestamp(System.currentTimeMillis)
 
   private def formatDuration(duration: Int) = {
     val hour = duration / 60 / 60

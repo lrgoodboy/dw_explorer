@@ -11,6 +11,7 @@ define('explorer/queryEditor', [
     'dojo/store/Memory',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
+    'dojo/store/util/QueryResults',
     'dijit/registry',
     'dijit/layout/ContentPane',
     'dijit/Tree',
@@ -24,7 +25,7 @@ define('explorer/queryEditor', [
     'dgrid/extensions/ColumnResizer',
     'put-selector/put',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, date, request, json, Memory, JsonRest, Observable,
+], function(declare, lang, config, array, query, html, date, request, json, Memory, JsonRest, Observable, QueryResults,
             registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem,
             Grid, OnDemandGrid, Selection, ColumnResizer, put) {
 
@@ -228,8 +229,6 @@ define('explorer/queryEditor', [
                         data.push(row);
                     });
 
-                    console.log(data);
-
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
                         store: new Memory({data: data}),
                         columns: columns
@@ -259,25 +258,45 @@ define('explorer/queryEditor', [
         initDocument: function() {
             var self = this;
 
-            var store = Observable(JsonRest({
-                target: config.contextPath + '/query-editor/api/doc/',
-                getChildren: function(object) {
-                    if (object.children !== true) {
-                        return object.children;
-                    }
-                    return this.get(object.id).then(function(fullObject) {
-                        return fullObject.children;
-                    });
-                }
+            var store = Observable(Memory({
+
             }));
 
             var model = new ObjectStoreModel({
                 store: store,
                 getRoot: function(onItem) {
-                    this.store.get('root').then(onItem);
+                    request(config.contextPath + '/query-editor/api/doc/', {
+                        handleAs: 'json'
+                    }).then(function(docs) {
+                        store.add(docs[0]);
+                        onItem(docs[0]);
+                    });
                 },
                 mayHaveChildren: function(item) {
-                    return item.children !== false;
+                    return item.isFolder;
+                },
+                getChildren: function(object, onComplete) {
+
+                    request(config.contextPath + '/query-editor/api/doc/', {
+                        query: {parent: object.id},
+                        handleAs: 'json'
+                    }).then(function(docs) {
+
+                        array.forEach(docs, function(doc) {
+                            store.add(doc);
+                        });
+
+                        var results = store.query({
+                            parent: object.id
+                        }, {
+                            sort: [
+                               {attribute: 'isFolder', descending: true},
+                               {attribute: 'name', descending: false}
+                            ]
+                        });
+
+                        onComplete(results);
+                    });
                 }
             });
 
@@ -285,7 +304,7 @@ define('explorer/queryEditor', [
                 model: model,
                 onDblClick: function(item) {
 
-                    if (item.children !== false) {
+                    if (item.isFolder) {
                         return;
                     }
 
@@ -307,7 +326,7 @@ define('explorer/queryEditor', [
                         });
 
                         var editor = new Editor({
-                            plugins: ['undo', 'redo', '|', 'cut', 'copy', 'paste', '|', 'runner'],
+                            plugins: ['undo', 'redo', '|', 'runner'],
                             value: object.content
                         });
 
@@ -335,12 +354,24 @@ define('explorer/queryEditor', [
 
                     var item = registry.byNode(this.getParent().currentTarget).item;
 
-                    store.add({
-                        parent: item.children !== false ? item.id: item.parent,
-                        filename: name,
-                        content: '',
-                        isFolder: false
+                    request(config.contextPath + '/query-editor/api/doc/', {
+                        data: json.stringify({
+                            parent: item.isFolder ? item.id : item.parent,
+                            filename: name,
+                            isFolder: false
+                        }),
+                        method: 'POST',
+                        handleAs: 'json',
+                        headers: {'content-type': 'application/json'}
+                    }).then(function(doc) {
+                        store.add(doc);
                     });
+
+                    /*store.add({
+                        parent: item.isFolder ? item.id: item.parent,
+                        filename: name,
+                        isFolder: false
+                    });*/
                 }
             }));
 
@@ -371,6 +402,40 @@ define('explorer/queryEditor', [
                     store.remove(item.id);
                 }
             }));
+
+            (function() {
+
+            var data = [
+                {id: 0, name: 'root', children: true},
+                {id: 1, name: 'node 1', children: true, parent: 0},
+                {id: 2, name: 'node 2', children: false, parent: 1},
+                {id: 3, name: 'node 3', children: false, parent: 0}
+            ];
+
+            var store = Observable(Memory({
+                data: data,
+                getChildren: function(object) {
+                    return this.query({parent: object.id}, {sort: [{attribute: 'children', descending: false}, {attribute: 'name', descending: true}]});
+                }
+            }));
+
+            var model = ObjectStoreModel({
+                store: store,
+                query: {id: 0},
+                mayHaveChildren: function(item) {
+                    return item.children;
+                }
+            });
+
+            var tree = new Tree({
+                model: model
+            }, 'treeTest');
+
+            setTimeout(function() {
+                store.notify({id: 4, name: 'node 4', children: true, parent: 0});
+            }, 3000);
+
+            })();
         },
 
         initMetadata: function() {

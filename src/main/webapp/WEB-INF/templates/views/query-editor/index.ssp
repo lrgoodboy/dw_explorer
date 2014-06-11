@@ -21,6 +21,9 @@
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '元数据'">
       <div id="treeMetadata"></div>
     </div>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: 'treeTest'">
+      <div id="treeTest"></div>
+    </div>
   </div>
 
   <div id="central" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'center'"></div>

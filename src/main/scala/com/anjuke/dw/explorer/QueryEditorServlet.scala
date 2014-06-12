@@ -143,18 +143,20 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   get("/api/doc/?") {
       contentType = formats("json")
 
+      def doc2map(doc: Doc) = Map(
+        "id" -> doc.id,
+        "parent" -> doc.parentId,
+        "name" -> doc.filename,
+        "isFolder" -> doc.isFolder
+      )
+
       params.get("parent") match {
         case Some(parent) =>
-          Doc.findByParent(user.id, parent.toLong).map(doc => {
-            Map(
-              "id" -> doc.id,
-              "parent" -> doc.parentId,
-              "name" -> doc.filename,
-              "isFolder" -> doc.isFolder
-            )
-          })
+          Doc.findList(user.id, Some(parent.toLong)).map(doc2map)
 
-        case None => List(Map("id" -> 0, "name" -> "My Documents", "isFolder" -> true))
+        case None =>
+          Map("id" -> 0, "name" -> "My Documents", "isFolder" -> true) ::
+          Doc.findList(user.id).map(doc2map)
       }
   }
 
@@ -189,7 +191,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
           "parent" -> child.parentId,
           "name" -> child.filename,
           "content" -> child.content,
-          "children" -> child.isFolder
+          "isFolder" -> child.isFolder
         )
 
       case None => halt(InternalServerError("Fail to create doc."))
@@ -205,16 +207,14 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
                           filename = (parsedBody \ "filename").extractOpt[String],
                           content = (parsedBody \ "content").extractOpt[String])
 
-        Unit
-
-        /*val newDoc = Doc.lookup(doc.id).get
+        val newDoc = Doc.lookup(doc.id).get
         Map(
           "id" -> newDoc.id,
           "parent" -> newDoc.parentId,
           "name" -> newDoc.filename,
           "content" -> newDoc.content,
-          "children" -> newDoc.isFolder
-        )*/
+          "isFolder" -> newDoc.isFolder
+        )
 
       case _ => halt(BadRequest())
     }

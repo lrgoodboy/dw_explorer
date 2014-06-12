@@ -24,7 +24,12 @@ trait AuthenticationSupport extends ScentrySupport[User] {
 
   protected def requireLogin() = {
     if (!isAuthenticated) {
-      val returnTo = URLEncoder.encode(request.getRequestURL.toString, "UTF-8")
+      val queryString = Option(request.getQueryString) match {
+        case Some(s) => "?" + s
+        case None => ""
+      }
+      val requestUrl = request.getRequestURL.toString + queryString
+      val returnTo = URLEncoder.encode(requestUrl, "UTF-8")
       redirect(s"${scentryConfig.login}?${scentryConfig.returnToKey}=$returnTo")
     }
   }

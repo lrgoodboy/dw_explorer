@@ -168,14 +168,12 @@ object Doc {
     }
   }
 
-  def findByUser(userId: Long) = findByParent(userId, 0)
-
-  def findByParent(userId: Long, parentId: Long) = {
+  def findList(userId: Long, parentId: Option[Long] = None) = {
     inTransaction {
       from(docs)(doc =>
         where(
           doc.userId === userId and
-          doc.parentId === parentId and
+          doc.parentId === parentId.? and
           doc.isDeleted === false
         )
         select(doc)

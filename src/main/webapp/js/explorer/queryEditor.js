@@ -11,6 +11,7 @@ define('explorer/queryEditor', [
     'dojo/store/Memory',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
+    'dojo/store/util/QueryResults',
     'dijit/registry',
     'dijit/layout/ContentPane',
     'dijit/Tree',
@@ -24,7 +25,7 @@ define('explorer/queryEditor', [
     'dgrid/extensions/ColumnResizer',
     'put-selector/put',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, date, request, json, Memory, JsonRest, Observable,
+], function(declare, lang, config, array, query, html, date, request, json, Memory, JsonRest, Observable, QueryResults,
             registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem,
             Grid, OnDemandGrid, Selection, ColumnResizer, put) {
 
@@ -228,8 +229,6 @@ define('explorer/queryEditor', [
                         data.push(row);
                     });
 
-                    console.log(data);
-
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
                         store: new Memory({data: data}),
                         columns: columns
@@ -259,118 +258,185 @@ define('explorer/queryEditor', [
         initDocument: function() {
             var self = this;
 
-            var store = Observable(JsonRest({
+            var rest = JsonRest({
                 target: config.contextPath + '/query-editor/api/doc/',
+            });
+
+            rest.query().then(function(docs) {
+
+                var store = Observable(Memory({
+                    data: docs,
+                    getChildren: function(object) {
+                        return this.query({parent: object.id}, {
+                            sort: [
+                                {attribute: 'isFolder', descending: true},
+                                {attribute: 'name', descending: false}
+                            ]
+                        });
+                    }
+                }));
+
+                var model = new ObjectStoreModel({
+                    store: store,
+                    query: {id: 0},
+                    mayHaveChildren: function(item) {
+                        return item.isFolder;
+                    },
+                });
+
+                self.treeDoc = new Tree({
+                    model: model,
+                    onDblClick: function(item) {
+
+                        if (item.isFolder) {
+                            return;
+                        }
+
+                        var central = registry.byId('central');
+                        var paneId = 'editorPane_' + item.id;
+                        var pane = registry.byId(paneId);
+
+                        if (typeof pane != 'undefined') {
+                            central.selectChild(pane);
+                            return;
+                        }
+
+                        rest.get(item.id).then(function(object) {
+
+                            var pane = new ContentPane({
+                                id: paneId,
+                                title: object.name,
+                                closable: true
+                            });
+
+                            var editor = new Editor({
+                                plugins: ['undo', 'redo', '|', 'runner'],
+                                value: object.content
+                            });
+
+                            pane.addChild(editor);
+                            central.addChild(pane);
+                            central.selectChild(pane);
+                        });
+                    }
+                }, 'treeDoc');
+
+                // context menu
+                var menu = new Menu({
+                    targetNodeIds: [self.treeDoc.domNode],
+                    selector: '.dijitTreeNode'
+                });
+
+                menu.addChild(new MenuItem({
+                    label: '新建文件',
+                    onClick: function() {
+
+                        var name = prompt('请输入文件名');
+                        if (!name) {
+                            return;
+                        }
+
+                        var item = registry.byNode(this.getParent().currentTarget).item;
+
+                        rest.add({
+                            parent: item.isFolder ? item.id : item.parent,
+                            filename: name,
+                            isFolder: false
+                        }).then(function(doc) {
+                            store.notify(doc);
+                        });
+                    }
+                }));
+
+                menu.addChild(new MenuItem({
+                    label: '新建文件夹',
+                    onClick: function() {
+
+                        var name = prompt('请输入文件夹名称');
+                        if (!name) {
+                            return;
+                        }
+
+                        var item = registry.byNode(this.getParent().currentTarget).item;
+
+                        rest.add({
+                            parent: item.isFolder ? item.id : item.parent,
+                            filename: name,
+                            isFolder: true
+                        }).then(function(doc) {
+                            store.notify(doc);
+                        });
+
+                    }
+                }));
+
+                menu.addChild(new MenuItem({
+                    label: '重命名',
+                    onClick: function() {
+                        var name = prompt('请输入新的名称');
+                        if (!name) {
+                            return;
+                        }
+
+                        var item = registry.byNode(this.getParent().currentTarget).item;
+
+                        rest.put({
+                            id: item.id,
+                            filename: name
+                        }).then(function(doc) {
+                            store.notify(doc, doc.id);
+                        });
+
+                    }
+                }));
+
+                menu.addChild(new MenuItem({
+                    label: '删除',
+                    onClick: function() {
+                        if (!confirm('确定要删除吗？')) {
+                            return;
+                        }
+                        var item = registry.byNode(this.getParent().currentTarget).item;
+                        rest.remove(item.id);
+                        store.notify(null, item.id);
+                    }
+                }));
+
+            });
+
+            (function() {
+
+            var data = [
+                {id: 0, name: 'root', children: true},
+                {id: 1, name: 'node 1', children: true, parent: 0},
+                {id: 2, name: 'node 2', children: false, parent: 1},
+                {id: 3, name: 'node 3', children: false, parent: 0}
+            ];
+
+            var store = Observable(Memory({
+                data: data,
                 getChildren: function(object) {
-                    if (object.children !== true) {
-                        return object.children;
-                    }
-                    return this.get(object.id).then(function(fullObject) {
-                        return fullObject.children;
-                    });
+                    return this.query({parent: object.id}, {sort: [{attribute: 'children', descending: false}, {attribute: 'name', descending: true}]});
                 }
             }));
 
-            var model = new ObjectStoreModel({
+            var model = ObjectStoreModel({
                 store: store,
-                getRoot: function(onItem) {
-                    this.store.get('root').then(onItem);
-                },
+                query: {id: 0},
                 mayHaveChildren: function(item) {
-                    return item.children !== false;
+                    return item.children;
                 }
             });
 
-            self.treeDoc = new Tree({
-                model: model,
-                onDblClick: function(item) {
+            var tree = new Tree({
+                model: model
+            }, 'treeTest');
 
-                    if (item.children !== false) {
-                        return;
-                    }
+            setTimeout(function() {
+                store.notify({id: 4, name: 'node 4', children: true, parent: 0});
+            }, 3000);
 
-                    var central = registry.byId('central');
-                    var paneId = 'editorPane_' + item.id;
-                    var pane = registry.byId(paneId);
-
-                    if (typeof pane != 'undefined') {
-                        central.selectChild(pane);
-                        return;
-                    }
-
-                    this.model.store.get(item.id).then(function(object) {
-
-                        var pane = new ContentPane({
-                            id: paneId,
-                            title: object.name,
-                            closable: true
-                        });
-
-                        var editor = new Editor({
-                            plugins: ['undo', 'redo', '|', 'cut', 'copy', 'paste', '|', 'runner'],
-                            value: object.content
-                        });
-
-                        pane.addChild(editor);
-                        central.addChild(pane);
-                        central.selectChild(pane);
-                    });
-                }
-            }, 'treeDoc');
-
-            // context menu
-            var menu = new Menu({
-                targetNodeIds: [self.treeDoc.domNode],
-                selector: '.dijitTreeNode'
-            });
-
-            menu.addChild(new MenuItem({
-                label: '新建文件',
-                onClick: function() {
-
-                    var name = prompt('请输入文件名');
-                    if (!name) {
-                        return;
-                    }
-
-                    var item = registry.byNode(this.getParent().currentTarget).item;
-
-                    store.add({
-                        parent: item.children !== false ? item.id: item.parent,
-                        filename: name,
-                        content: '',
-                        isFolder: false
-                    });
-                }
-            }));
-
-            menu.addChild(new MenuItem({
-                label: '重命名',
-                onClick: function() {
-                    var name = prompt('请输入新的文件名');
-                    if (!name) {
-                        return;
-                    }
-
-                    var item = registry.byNode(this.getParent().currentTarget).item;
-
-                    store.put({
-                        id: item.id,
-                        filename: name
-                    });
-                }
-            }));
-
-            menu.addChild(new MenuItem({
-                label: '删除',
-                onClick: function() {
-                    if (!confirm('确定要删除吗？')) {
-                        return;
-                    }
-                    var item = registry.byNode(this.getParent().currentTarget).item;
-                    store.remove(item.id);
-                }
-            }));
+            })();
         },
 
         initMetadata: function() {

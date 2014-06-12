@@ -23,7 +23,7 @@ html, body {
 }
 
 .grid-task-status {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .grid-task-status .field-id {
@@ -52,7 +52,20 @@ html, body {
     display: none;
 }
 
-.task-error-header {
+.task-result-header {
     font-weight: bold;
     font-size: 15px;
+    margin-bottom: 10px;
+}
+
+.task-result-header a {
+    float: right;
+}
+
+.grid-task-result {
+    margin-bottom: 10px;
+}
+
+.grid-task-result .dgrid-cell {
+    width: 50px;
 }

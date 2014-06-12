@@ -85,10 +85,52 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   }
 
   get("/api/task/output/:id") {
-    new File(TaskActor.outputFile(params("id").toLong)) match {
-      case file if file.exists => file
-      case _ => halt(NotFound())
+    contentType = formats("json")
+
+    val file = new File(TaskActor.outputFile(params("id").toLong))
+    if (!file.exists) {
+      halt(NotFound())
     }
+
+    val lines = io.Source.fromFile(file).getLines
+
+    if (!lines.hasNext) {
+      Map("columns" -> Nil)
+    } else {
+
+      val columns = lines.next().split("\t").map(label => {
+        Map("label" -> label, "field" -> label, "sortable" -> false)
+      }).toList
+
+      if (columns.isEmpty) {
+        Map("columns" -> Nil)
+      } else {
+
+        val rows = lines.take(100).map(line => {
+          val cols = line.split("\t")
+          val row = for (i <- cols.indices if i < columns.length) yield {
+            (columns(i)("label"), cols(i))
+          }
+          row.toMap
+        }).toList
+
+        if (rows.isEmpty) {
+          Map("columns" -> columns, "rows" -> Nil)
+        } else {
+
+          val columnsWidth = columns.map(column => {
+            val width = rows.map(_.getOrElse(column("label"), "").length).filter(_ > 0) match {
+              case widthList if widthList.nonEmpty => widthList.sum / widthList.length
+              case _ => 0
+            }
+            column + ("width" -> (if (width > 5) width else 5) * 8)
+          })
+
+          Map("columns" -> columnsWidth, "rows" -> rows)
+        }
+      }
+    }
+
   }
 
     get("/api/task/error/:id") {

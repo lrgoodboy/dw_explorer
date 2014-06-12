@@ -193,46 +193,32 @@ define('explorer/queryEditor', [
             if (showError) {
 
                 request(config.contextPath + '/query-editor/api/task/error/' + task.id).then(function(data) {
-                    put(pane.domNode, 'div.task-error-header', '错误日志');
+                    put(pane.domNode, 'div.task-result-header', '错误日志');
                     put(pane.domNode, 'pre', data);
                 });
 
             } else {
 
-                request(config.contextPath + '/query-editor/api/task/output/' + task.id).then(function(data) {
+                request(config.contextPath + '/query-editor/api/task/output/' + task.id, {
+                    handleAs: 'json'
+                }).then(function(result) {
 
-                    if (!data) {
-                        put(pane.domNode, 'div.task-error-header', '未返回结果');
+                    if (result.columns.length == 0) {
+                        put(pane.domNode, 'div.task-result-header', '未返回结果');
                         return;
                     }
 
-                    var lines = data.split(/\n/);
-                    var columns = [];
-                    array.forEach(lines.shift().split(/\t/), function(column) {
-                         columns.push({
-                             label: column,
-                             field: column
-                         });
-                    });
-
-                    var data = [];
-                    array.forEach(lines, function(line, id) {
-                        if (!line) {
-                            return;
-                        }
-                        var row = {};
-                        array.forEach(line.split(/\t/), function(columnData, columnIndex) {
-                            if (columnIndex > columns.length - 1) {
-                                return;
-                            }
-                            row[columns[columnIndex].field] = columnData;
-                        });
-                        data.push(row);
-                    });
+                    if (result.rows.length == 0) {
+                        put(pane.domNode, 'div.task-result-header', '返回结果为空');
+                    } else {
+                        var div = put(pane.domNode, 'div.task-result-header', '结果列表（前100条）');
+                        put(div, 'a[href="' + config.contextPath + '/query-editor/api/task/excel/' + task.id + '"]', '下载Excel');
+                    }
 
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
-                        store: new Memory({data: data}),
-                        columns: columns
+                        store: new Memory({data: result.rows}),
+                        columns: result.columns,
+                        className: 'dgrid-autoheight grid-task-result'
                     });
 
                     pane.addChild(gridOutput);
@@ -405,6 +391,8 @@ define('explorer/queryEditor', [
                     }
                 }));
 
+
+                self.treeDoc.startup();
             });
         },
 

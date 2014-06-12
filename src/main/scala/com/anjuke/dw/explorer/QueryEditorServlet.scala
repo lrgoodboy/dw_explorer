@@ -140,26 +140,31 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     }
   }
 
-  get("/api/metadata/:id") {
+  get("/api/metadata/?") {
     contentType = formats("json")
 
-    params("id") match {
-      case "root" =>
-        val databases = List(
-          Map("id" -> "dw_db", "name" -> "dw_db", "children" -> true),
-          Map("id" -> "dw_stage", "name" -> "dw_stage", "children" -> true),
-          Map("id" -> "dw_extract", "name" -> "dw_extract", "children" -> true),
-          Map("id" -> "dw_db_temp", "name" -> "dw_db_temp", "children" -> true),
-          Map("id" -> "dw_db_test", "name" -> "dw_db_test", "children" -> true)
+    params.get("parent") match {
+      case Some("root") =>
+        List(
+          Map("id" -> "dw_db", "name" -> "dw_db", "parent" -> "root", "children" -> true),
+          Map("id" -> "dw_stage", "name" -> "dw_stage", "parent" -> "root", "children" -> true),
+          Map("id" -> "dw_extract", "name" -> "dw_extract", "parent" -> "root", "children" -> true),
+          Map("id" -> "dw_db_temp", "name" -> "dw_db_temp", "parent" -> "root", "children" -> true),
+          Map("id" -> "dw_db_test", "name" -> "dw_db_test", "parent" -> "root", "children" -> true)
         )
-        Map("id" -> "root", "name" -> "Data Warehouse", "children" -> databases)
 
-      case "dw_db" =>
-        val tables = List(
-          Map("id" -> "dw_db.dw_soj_imp_dtl", "name" -> "dw_soj_imp_dtl"),
-          Map("id" -> "dw_db.dw_soj_imp_dtl_npv", "name" -> "dw_soj_imp_dtl_npv")
+      case Some("dw_db") =>
+        List(
+          Map("id" -> "dw_db.dw_soj_imp_dtl", "name" -> "dw_soj_imp_dtl", "parent" -> "dw_db", "children" -> false),
+          Map("id" -> "dw_db.dw_soj_imp_dtl_npv", "name" -> "dw_soj_imp_dtl_npv", "parent" -> "dw_db", "children" -> false)
         )
-        Map("id" -> "dw_db", "name" -> "dw_db", "children" -> tables)
+
+      case Some("dw_stage") =>
+        List(
+          Map("id" -> "dw_stage.st_dw_soj_imp_dtl", "name" -> "st_dw_soj_imp_dtl", "parent" -> "dw_stage", "children" -> false)
+        )
+
+      case None => List(Map("id" -> "root", "name" -> "Data Warehouse", "children" -> true))
 
       case _ => Nil
     }

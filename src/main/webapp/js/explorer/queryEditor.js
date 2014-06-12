@@ -399,31 +399,27 @@ define('explorer/queryEditor', [
         initMetadata: function() {
             var self = this;
 
-            var store = new JsonRest({
+            var store = Observable(JsonRest({
                 target: config.contextPath + '/query-editor/api/metadata/',
                 getChildren: function(object) {
-                    if (object.children !== true) {
-                        return object.children;
-                    }
-                    return this.get(object.id).then(function(fullObject) {
-                        return fullObject.children;
-                    });
+                    return this.query({parent: object.id});
                 }
-            });
+            }));
 
             var model = new ObjectStoreModel({
                 store: store,
-                getRoot: function(onItem) {
-                    this.store.get('root').then(onItem);
-                },
                 mayHaveChildren: function(item) {
-                    return 'children' in item;
+                    return item.children;
                 }
             });
 
             self.treeMetadata = new Tree({
                 model: model
             }, 'treeMetadata');
+
+            setTimeout(function() {
+                store.notify({id: 'test', name: 'test', parent: 'root', children: false});
+            }, 3000);
         },
 
         _theEnd: undefined

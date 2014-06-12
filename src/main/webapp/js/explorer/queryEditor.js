@@ -23,11 +23,12 @@ define('explorer/queryEditor', [
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
+    'dojox/editor/plugins/Save',
     'put-selector/put',
     'dojo/domReady!'
 ], function(declare, lang, config, array, query, html, date, request, json, Memory, JsonRest, Observable, QueryResults,
             registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem,
-            Grid, OnDemandGrid, Selection, ColumnResizer, put) {
+            Grid, OnDemandGrid, Selection, ColumnResizer, EditorSavePlugin, put) {
 
     var QueryEditor = declare(null, {
 
@@ -309,8 +310,10 @@ define('explorer/queryEditor', [
                                 closable: true
                             });
 
+                            var docUrl = config.contextPath + '/query-editor/api/doc/content/' + item.id;
+
                             var editor = new Editor({
-                                plugins: ['undo', 'redo', '|', 'runner'],
+                                plugins: ['undo', 'redo', '|', {name: 'save', url: docUrl}, '|', 'runner'],
                                 value: object.content
                             });
 
@@ -403,40 +406,6 @@ define('explorer/queryEditor', [
                 }));
 
             });
-
-            (function() {
-
-            var data = [
-                {id: 0, name: 'root', children: true},
-                {id: 1, name: 'node 1', children: true, parent: 0},
-                {id: 2, name: 'node 2', children: false, parent: 1},
-                {id: 3, name: 'node 3', children: false, parent: 0}
-            ];
-
-            var store = Observable(Memory({
-                data: data,
-                getChildren: function(object) {
-                    return this.query({parent: object.id}, {sort: [{attribute: 'children', descending: false}, {attribute: 'name', descending: true}]});
-                }
-            }));
-
-            var model = ObjectStoreModel({
-                store: store,
-                query: {id: 0},
-                mayHaveChildren: function(item) {
-                    return item.children;
-                }
-            });
-
-            var tree = new Tree({
-                model: model
-            }, 'treeTest');
-
-            setTimeout(function() {
-                store.notify({id: 4, name: 'node 4', children: true, parent: 0});
-            }, 3000);
-
-            })();
         },
 
         initMetadata: function() {

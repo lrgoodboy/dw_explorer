@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="${uri("/webjars/dojo/1.9.3/dijit/themes/claro/claro.css")}">
 <link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/dgrid.css")}">
 <link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/skins/claro.css")}">
+<link rel="stylesheet" href="${uri("/webjars/dojo/1.9.3/dojox/editor/plugins/resources/css/Save.css")}">
 <link rel="stylesheet" href="${uri("/css/query-editor.css")}">
 </head>
 <body class="claro">
@@ -20,9 +21,6 @@
     </div>
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '元数据'">
       <div id="treeMetadata"></div>
-    </div>
-    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: 'treeTest'">
-      <div id="treeTest"></div>
     </div>
   </div>
 

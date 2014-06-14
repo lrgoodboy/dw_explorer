@@ -156,12 +156,32 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       halt(NotFound())
     }
 
+    val wb = new SXSSFWorkbook
+    val sheet = wb.createSheet(s"task_result_$id")
 
+    val row = sheet.createRow(0)
+    for (columnIndex <- columns.indices) {
+      val cell = row.createCell(columnIndex)
+      cell.setCellValue(columns(columnIndex))
+    }
+
+    var rowIndex = 1
+    for (line <- lines if line.nonEmpty) {
+        val row = sheet.createRow(rowIndex)
+
+        val columns = line.split("\t")
+        for (columnIndex <- columns.indices) {
+          val cell = row.createCell(columnIndex)
+          cell.setCellValue(columns(columnIndex))
+        }
+
+        rowIndex += 1
+    }
 
     contentType = "application/octet-stream"
     response.setHeader("content-disposition", s"attachment; filename=task_result_$id.xlsx")
-
-
+    wb.write(response.outputStream)
+    wb.dispose
 
     Unit
   }

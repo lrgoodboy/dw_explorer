@@ -133,7 +133,60 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
   }
 
-    get("/api/task/error/:id") {
+  get("/api/task/excel/:id") {
+
+    import org.apache.poi.ss.usermodel.{Workbook, Sheet, Row, Cell}
+    import org.apache.poi.xssf.streaming.SXSSFWorkbook
+
+    val id = params("id").toLong
+
+    val file = new File(TaskActor.outputFile(id))
+    if (!file.exists) {
+      halt(NotFound())
+    }
+
+    val lines = io.Source.fromFile(file).getLines
+
+    if (!lines.hasNext) {
+      halt(NotFound())
+    }
+
+    val columns = lines.next.split("\t")
+    if (columns.isEmpty) {
+      halt(NotFound())
+    }
+
+    val wb = new SXSSFWorkbook
+    val sheet = wb.createSheet(s"task_result_$id")
+
+    val row = sheet.createRow(0)
+    for (columnIndex <- columns.indices) {
+      val cell = row.createCell(columnIndex)
+      cell.setCellValue(columns(columnIndex))
+    }
+
+    var rowIndex = 1
+    for (line <- lines if line.nonEmpty) {
+        val row = sheet.createRow(rowIndex)
+
+        val columns = line.split("\t")
+        for (columnIndex <- columns.indices) {
+          val cell = row.createCell(columnIndex)
+          cell.setCellValue(columns(columnIndex))
+        }
+
+        rowIndex += 1
+    }
+
+    contentType = "application/octet-stream"
+    response.setHeader("content-disposition", s"attachment; filename=task_result_$id.xlsx")
+    wb.write(response.outputStream)
+    wb.dispose
+
+    Unit
+  }
+
+  get("/api/task/error/:id") {
     new File(TaskActor.errorFile(params("id").toLong)) match {
       case file if file.exists => file
       case _ => halt(NotFound())

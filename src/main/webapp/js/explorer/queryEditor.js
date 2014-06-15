@@ -494,7 +494,8 @@ define('explorer/queryEditor', [
                         var li = put(ulTables, 'li');
                         var anchor =  put(li, 'a[href="javascript:void(0);"]', object.name);
                         on(anchor, 'click', function() {
-                            console.log(object);
+                            var segs = object.id.split(/\./);
+                            self.descTable(segs[0], segs[1]);
                         });
                     });
                 }
@@ -506,6 +507,74 @@ define('explorer/queryEditor', [
             });
 
             txtTable.startup();
+        },
+
+        descTable: function(database, table) {
+            var self = this;
+
+            var pane = new ContentPane({
+                title: '表信息[' + table + ']',
+                closable: true
+            });
+
+            var bottomCol = registry.byId('bottomCol');
+            bottomCol.addChild(pane);
+            bottomCol.selectChild(pane);
+
+            var loading = put(pane.domNode, 'div[style="width: 100%; margin: 10px;"]');
+            put(loading, 'img[src="' + config.contextPath + '/webjars/dojo/1.9.3/dijit/themes/claro/images/loadingAnimation.gif"][align="top"]');
+            put(loading, 'span', '加载中……');
+
+            request(config.contextPath + '/query-editor/api/metadata/desc/', {
+                query: {database: database, table: table},
+                handleAs: 'json'
+            }).then(function(result) {
+
+                put(loading, '!');
+
+                if (result.columns.length == 0) {
+                    put(pane.domNode, 'div[style="color: red;"]', '加载失败');
+                    return;
+                }
+
+                var infoGrid  = new Grid({
+                    className: 'dgrid-autoheight',
+                    columns: [
+                        {label: '数据库', field: 'database', sortable: false},
+                        {label: '表名', field: 'table', sortable: false},
+                        {label: '分区字段', field: 'partitions', sortable: false},
+                        {label: '整表大小', field: 'size', sortable: false}
+                    ]
+                });
+
+                infoGrid.renderArray(result.info);
+                pane.addChild(infoGrid);
+
+                var columnGrid  = new Grid({
+                    className: 'dgrid-autoheight',
+                    columns: [
+                        {label: '字段名', field: 'name', sortable: false},
+                        {label: '类型', field: 'type', sortable: false},
+                        {label: '注释', field: 'comment', sortable: false}
+                    ]
+                });
+
+                columnGrid.renderArray(result.columns);
+                pane.addChild(columnGrid);
+
+                var columns = [];
+                array.forEach(result.columns, function(column) {
+                    columns.push({label: column.name, field: column.name, sortable: false});
+                });
+
+                var rowGrid  = new Grid({
+                    className: 'dgrid-autoheight',
+                    columns: columns
+                });
+
+                rowGrid.renderArray(result.rows);
+                pane.addChild(rowGrid);
+            });
         },
 
         _theEnd: undefined

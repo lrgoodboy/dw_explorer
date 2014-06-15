@@ -167,8 +167,58 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     }
   }
 
-  get("/api/metadata/desc/:database/:table") {
+  get("/api/metadata/desc/?") {
+    contentType = formats("json")
 
+    val database = params("database")
+    val table = params("table")
+
+    import dispatch._
+    import dispatch.Defaults._
+
+    val req = dispatch.url(TaskActor.HIVE_SERVER_URL) / "table" / "desc" / database / table
+    val info = Http(req OK as.String).map(resultJson => {
+        val result = parse(resultJson)
+
+        val partitions = for {
+          JObject(column) <- result \ "columns"
+          JField("partition", JBool(partition)) <- column
+          JField("name", JString(name)) <- column
+          if partition
+        } yield name
+
+        val columns = for {
+          JObject(column) <- result \ "columns"
+          JField("name", JString(name)) <- column
+          JField("type", JString(dataType)) <- column
+          JField("comment", JString(comment)) <- column
+        } yield Map("name" -> name, "type" -> dataType, "comment" -> comment)
+
+        val rows = for (JArray(row) <- result \ "rows") yield {
+          val rowData = for (JString(col) <- row) yield col
+          val pairs = for (i <- rowData.indices) yield (columns(i)("name"), rowData(i))
+          pairs.toMap
+        }
+
+        val size = (result \ "size").extract[Long].toString + "B"
+
+        val info = List(Map(
+          "database" -> database,
+          "table" -> table,
+          "partitions" -> {
+            if (partitions.nonEmpty) partitions.mkString(", ") else "未分区"
+          },
+          "size" -> size
+        ))
+
+        Map(
+          "info" -> info,
+          "columns" -> columns,
+          "rows" -> rows
+        )
+    })
+
+    info()
   }
 
   get("/api/doc/:id") {

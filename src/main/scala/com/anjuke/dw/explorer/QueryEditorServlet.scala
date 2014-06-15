@@ -1,18 +1,18 @@
 package com.anjuke.dw.explorer
 
-import org.json4s.Formats
 import org.scalatra.json.JacksonJsonSupport
-import org.json4s.DefaultFormats
 import com.anjuke.dw.explorer.init.DatabaseSessionSupport
 import com.anjuke.dw.explorer.init.AuthenticationSupport
 import com.anjuke.dw.explorer.models.{Task, Doc}
 import java.sql.Timestamp
 import akka.actor.ActorRef
-import org.json4s.JsonAST.JString
 import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
 import org.scalatra.{BadRequest, InternalServerError, NotFound}
 import java.io.File
+import org.json4s._
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
 
 class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     with JacksonJsonSupport with DatabaseSessionSupport with AuthenticationSupport {
@@ -143,31 +143,32 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   get("/api/metadata/?") {
     contentType = formats("json")
 
-    params.get("parent") match {
-      case Some("root") =>
-        List(
-          Map("id" -> "dw_db", "name" -> "dw_db", "parent" -> "root", "children" -> true),
-          Map("id" -> "dw_stage", "name" -> "dw_stage", "parent" -> "root", "children" -> true),
-          Map("id" -> "dw_extract", "name" -> "dw_extract", "parent" -> "root", "children" -> true),
-          Map("id" -> "dw_db_temp", "name" -> "dw_db_temp", "parent" -> "root", "children" -> true),
-          Map("id" -> "dw_db_test", "name" -> "dw_db_test", "parent" -> "root", "children" -> true)
-        )
+    params.get("database") match {
+      case Some(database) =>
 
-      case Some("dw_db") =>
-        List(
-          Map("id" -> "dw_db.dw_soj_imp_dtl", "name" -> "dw_soj_imp_dtl", "parent" -> "dw_db", "children" -> false),
-          Map("id" -> "dw_db.dw_soj_imp_dtl_npv", "name" -> "dw_soj_imp_dtl_npv", "parent" -> "dw_db", "children" -> false)
-        )
+        import dispatch._
+        import dispatch.Defaults._
 
-      case Some("dw_stage") =>
-        List(
-          Map("id" -> "dw_stage.st_dw_soj_imp_dtl", "name" -> "st_dw_soj_imp_dtl", "parent" -> "dw_stage", "children" -> false)
-        )
+        val req = dispatch.url(TaskActor.HIVE_SERVER_URL) / "table" / "list" / database
+        val tables = Http(req OK as.String).map(resultJson => {
+          val result = parse(resultJson)
+          for (JString(table) <- result) yield Map(
+            "id" -> s"$database.$table",
+            "name" -> table
+          )
+        })
 
-      case None => List(Map("id" -> "root", "name" -> "Data Warehouse", "children" -> true))
+        tables()
 
-      case _ => Nil
+      case None =>
+        Seq("dw_db", "dw_stage", "dw_extract", "dw_db_temp", "dw_db_test").map(database => {
+          Map("id" -> database, "name" -> database)
+        }).toList
     }
+  }
+
+  get("/api/metadata/desc/:database/:table") {
+
   }
 
   get("/api/doc/:id") {

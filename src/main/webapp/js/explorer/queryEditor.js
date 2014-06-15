@@ -5,6 +5,8 @@ define('explorer/queryEditor', [
     'dojo/_base/array',
     'dojo/query',
     'dojo/html',
+    'dojo/dom-style',
+    'dojo/on',
     'dojo/date/locale',
     'dojo/request',
     'dojo/json',
@@ -19,16 +21,19 @@ define('explorer/queryEditor', [
     'dijit/Editor',
     'dijit/Menu',
     'dijit/MenuItem',
+    'dijit/form/Select',
+    'dijit/form/TextBox',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
+    'dgrid/util/misc',
     'dojox/editor/plugins/Save',
     'put-selector/put',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, date, request, json, Memory, JsonRest, Observable, QueryResults,
-            registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem,
-            Grid, OnDemandGrid, Selection, ColumnResizer, EditorSavePlugin, put) {
+], function(declare, lang, config, array, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable, QueryResults,
+            registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem, Select, TextBox,
+            Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, EditorSavePlugin, put) {
 
     var QueryEditor = declare(null, {
 
@@ -399,27 +404,108 @@ define('explorer/queryEditor', [
         initMetadata: function() {
             var self = this;
 
-            var store = Observable(JsonRest({
-                target: config.contextPath + '/query-editor/api/metadata/',
-                getChildren: function(object) {
-                    return this.query({parent: object.id});
-                }
-            }));
+            domStyle.set('loadingTables', 'display', 'none');
 
-            var model = new ObjectStoreModel({
-                store: store,
-                mayHaveChildren: function(item) {
-                    return item.children;
-                }
+            var cache = {};
+
+            var store = new JsonRest({
+                target: config.contextPath + '/query-editor/api/metadata/'
             });
 
-            self.treeMetadata = new Tree({
-                model: model
-            }, 'treeMetadata');
+            store.query().then(function(databases) {
 
-            setTimeout(function() {
-                store.notify({id: 'test', name: 'test', parent: 'root', children: false});
-            }, 3000);
+                var options = [{label: '请选择数据库', value: '', selected: true}];
+                array.forEach(databases, function(database) {
+                    options.push({label: database.id, value: database.name});
+                });
+
+                var select = new Select({
+                    options: options,
+                    autoWidth: true,
+                    style: {width: '100%'}
+                }, 'selDatabase');
+
+                select.on('change', function() {
+
+                    domStyle.set('divTables', 'display', 'none');
+
+                    var database = this.get('value');
+                    if (!database) {
+                        return;
+                    }
+
+                    var table = this.get('value');
+
+                    if (!(table in cache)) {
+                        domStyle.set('loadingTables', 'display', '');
+                        store.query({database: database}).then(function(tables) {
+                            cache[database] = tables;
+                            domStyle.set('loadingTables', 'display', 'none');
+                            domStyle.set('divTables', 'display', '');
+                        });
+                    } else {
+                        domStyle.set('divTables', 'display', '');
+                    }
+
+                });
+
+                select.startup();
+            });
+
+            // search box
+            var txtTable = new TextBox({
+                placeHolder: '请输入表名关键字',
+                trim: true,
+                style: {width: '100%'}
+            }, 'txtTable');
+
+            var searchTable = dgridUtil.debounce(function() {
+
+                var database = registry.byId('selDatabase').get('value');
+                var table = registry.byId('txtTable').get('value');
+
+                var MAX = 20;
+                var result = [];
+
+                if (!table) {
+                    for (var i = 0; i < MAX && i < cache[database].length; ++i) {
+                        result.push(cache[database][i]);
+                    }
+                } else {
+
+                    array.every(cache[database], function(object) {
+                        if (object.name.indexOf(table) !== -1) {
+                            result.push(object);
+                        }
+                        return result.length < MAX;
+                    });
+
+                }
+
+                var ulTables = query('#ulTables')[0];
+                query('li', ulTables).forEach(function(li) {
+                    put(li, '!');
+                });
+
+                if (result.length == 0) {
+                    put(ulTables, 'li', '查无结果');
+                } else {
+                    array.forEach(result, function(object) {
+                        var li = put(ulTables, 'li');
+                        var anchor =  put(li, 'a[href="javascript:void(0);"]', object.name);
+                        on(anchor, 'click', function() {
+                            console.log(object);
+                        });
+                    });
+                }
+
+            }, null, 500);
+
+            txtTable.on('input', function(evt) {
+                searchTable();
+            });
+
+            txtTable.startup();
         },
 
         _theEnd: undefined

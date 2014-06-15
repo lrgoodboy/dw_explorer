@@ -14,7 +14,7 @@ import java.sql.Timestamp
 
 object TaskActor {
 
-  val HIVE_SERVER_URL = "http://10.20.8.70:8080/hive-server/api/task"
+  val HIVE_SERVER_URL = "http://10.20.8.70:8080/hive-server/api"
   val TASK_FOLDER = "/data2/dw_explorer/query/task"
 
   def outputFile(taskId: Long) = s"$TASK_FOLDER/query_task_$taskId.out"
@@ -76,7 +76,7 @@ class TaskActor extends Actor {
   def execute(taskId: Long, queries: String) {
 
     // send request
-    val submitReq = (dispatch.url(HIVE_SERVER_URL) / "submit").POST
+    val submitReq = (dispatch.url(HIVE_SERVER_URL) / "task" / "submit").POST
         .setContentType("application/json", "UTF-8")
         .setBody(compact(render(Map("query" -> queries))))
 
@@ -94,7 +94,7 @@ class TaskActor extends Actor {
     // wait for completion
     while (!Thread.interrupted) {
 
-      val statusReq = dispatch.url(HIVE_SERVER_URL) / "status" / remoteTaskId
+      val statusReq = dispatch.url(HIVE_SERVER_URL) / "task" / "status" / remoteTaskId
 
       val remoteStatusFuture = Http(statusReq OK as.String).map(resultJson => {
         val result = parse(resultJson)
@@ -106,7 +106,7 @@ class TaskActor extends Actor {
                 // read standard output
                 val outputWriter = new FileWriter(outputFile(taskId))
 
-                val outputReq = dispatch.url(HIVE_SERVER_URL) / "output" / remoteTaskId
+                val outputReq = dispatch.url(HIVE_SERVER_URL) / "task" / "output" / remoteTaskId
                 val outputFuture = Http(outputReq > as.stream.Lines(line => {
                   outputWriter.write(line)
                   outputWriter.write("\n")

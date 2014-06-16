@@ -31,6 +31,7 @@ object Task {
   val STATUS_RUNNING = 2
   val STATUS_OK = 3
   val STATUS_ERROR = 4
+  val STATUS_INTERRUPTED = 5
   val STATUS_DELETED = 99
 
   def lookup(id: Long): Option[Task] = {
@@ -102,6 +103,15 @@ object Task {
     calendar.set(Calendar.SECOND, 0)
     calendar.set(Calendar.MILLISECOND, 0)
     calendar.getTime
+  }
+
+  def isInterrupted(taskId: Long): Boolean = {
+    inTransaction {
+      from(tasks)(task =>
+        where(task.id === taskId and task.status === STATUS_INTERRUPTED)
+        compute(count)
+      ).toLong == 1
+    }
   }
 
 }

@@ -128,7 +128,11 @@ class TaskActor extends Actor {
 
       remoteStatusFuture() match {
         case 'break => return
-        case _ => TimeUnit.SECONDS.sleep(3)
+        case _ =>
+          if (Task.isInterrupted(taskId)) {
+            throw new Exception("Task is interrupted.")
+          }
+          TimeUnit.SECONDS.sleep(3)
       }
     }
   }

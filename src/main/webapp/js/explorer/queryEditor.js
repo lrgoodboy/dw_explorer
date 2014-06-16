@@ -223,7 +223,7 @@ define('explorer/queryEditor', [
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
                         store: new Memory({data: result.rows}),
                         columns: result.columns,
-                        className: 'dgrid-autoheight grid-task-result'
+                        className: 'dgrid-autoheight'
                     });
 
                     pane.addChild(gridOutput);
@@ -550,7 +550,7 @@ define('explorer/queryEditor', [
                 infoGrid.renderArray(result.info);
                 pane.addChild(infoGrid);
 
-                var columnGrid  = new Grid({
+                var columnGrid = new Grid({
                     className: 'dgrid-autoheight',
                     columns: [
                         {label: '字段名', field: 'name', sortable: false},
@@ -562,14 +562,9 @@ define('explorer/queryEditor', [
                 columnGrid.renderArray(result.columns);
                 pane.addChild(columnGrid);
 
-                var columns = [];
-                array.forEach(result.columns, function(column) {
-                    columns.push({label: column.name, field: column.name, sortable: false});
-                });
-
-                var rowGrid  = new Grid({
+                var rowGrid  = new (declare([Grid, ColumnResizer]))({
                     className: 'dgrid-autoheight',
-                    columns: columns
+                    columns: result.tableColumns
                 });
 
                 rowGrid.renderArray(result.rows);

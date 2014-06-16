@@ -102,38 +102,26 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
         Map("label" -> label, "field" -> label, "sortable" -> false)
       }).toList
 
-      if (columns.isEmpty) {
-        Map("columns" -> Nil)
-      } else {
+      val rows = if (columns.nonEmpty) {
 
-        val rows = lines.take(100).map(line => {
+        lines.take(100).map(line => {
           val cols = line.split("\t")
           val row = for (i <- cols.indices if i < columns.length) yield {
-            (columns(i)("label"), cols(i))
+            (columns(i)("label").asInstanceOf[String], cols(i))
           }
           row.toMap
         }).toList
 
-        if (rows.isEmpty) {
-          Map("columns" -> columns, "rows" -> Nil)
-        } else {
+      } else Nil
 
-          val columnsWidth = columns.map(column => {
-            val width = rows.map(_.getOrElse(column("label"), "").length).filter(_ > 0) match {
-              case widthList if widthList.nonEmpty => widthList.sum / widthList.length
-              case _ => 0
-            }
-            column + ("width" -> (if (width > 5) width else 5) * 8)
-          })
+      val columnsWidth = if (rows.nonEmpty) calcColumnsWidth(columns, rows) else columns
 
-          Map("columns" -> columnsWidth, "rows" -> rows)
-        }
-      }
+      Map("columns" -> columnsWidth, "rows" -> rows)
     }
 
   }
 
-    get("/api/task/error/:id") {
+  get("/api/task/error/:id") {
     new File(TaskActor.errorFile(params("id").toLong)) match {
       case file if file.exists => file
       case _ => halt(NotFound())
@@ -211,10 +199,21 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
           "size" -> size
         ))
 
+        val tableColumns = columns.map(column => {
+          Map(
+            "label" -> column("name"),
+            "field" -> column("name"),
+            "sortable" -> false
+          )
+        })
+
+        val tableColumnsWidth = if (rows.nonEmpty) calcColumnsWidth(tableColumns, rows) else tableColumns
+
         Map(
           "info" -> info,
           "columns" -> columns,
-          "rows" -> rows
+          "rows" -> rows,
+          "tableColumns" -> tableColumnsWidth
         )
     })
 
@@ -365,6 +364,18 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       },
       "updated" -> dfDateTime.format(task.updated)
     )
+  }
+
+  private def calcColumnsWidth(columns: List[Map[String, Any]], rows: List[Map[String, String]]) = {
+
+    columns.map(column => {
+      val width = rows.map(_.getOrElse(column("label").asInstanceOf[String], "").length).filter(_ > 0) match {
+        case widthList if widthList.nonEmpty => widthList.sum / widthList.length
+        case _ => 0
+      }
+      column + ("width" -> (if (width > 5) width else 5) * 8)
+    })
+
   }
 
 }

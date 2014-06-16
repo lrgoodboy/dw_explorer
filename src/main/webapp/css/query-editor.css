@@ -22,7 +22,7 @@ html, body {
     height: 200px;
 }
 
-.grid-task-status {
+.dgrid-grid {
     margin-bottom: 10px;
 }
 
@@ -60,14 +60,6 @@ html, body {
 
 .task-result-header a {
     float: right;
-}
-
-.grid-task-result {
-    margin-bottom: 10px;
-}
-
-.grid-task-result .dgrid-cell {
-    width: 50px;
 }
 
 #ulTables {

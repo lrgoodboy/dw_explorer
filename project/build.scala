@@ -40,7 +40,8 @@ object DwExplorerBuild extends Build {
         "org.scalatra" %% "scalatra-auth" % ScalatraVersion,
         "net.databinder.dispatch" %% "dispatch-core" % "0.11.1",
         "org.webjars" % "dgrid" % "0.3.14",
-        "org.apache.poi" % "poi-ooxml" % "3.10-FINAL"
+        "org.apache.poi" % "poi-ooxml" % "3.10-FINAL",
+        "commons-configuration" % "commons-configuration" % "1.10"
       ),
       scalateTemplateConfig in Compile <<= (sourceDirectory in Compile){ base =>
         Seq(

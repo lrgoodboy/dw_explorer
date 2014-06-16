@@ -12,14 +12,15 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import java.sql.Timestamp
 import org.scalatra.auth.ScentryConfig
+import com.anjuke.dw.explorer.util.Config
 
 class AnjukeAuthStrategy(protected val app: ScalatraBase, protected val scentryConfig: ScentryConfig)
     (implicit request: HttpServletRequest, response: HttpServletResponse)
     extends ScentryStrategy[User] {
 
-  val AUTH_BASE_URL = "https://auth.corp.anjuke.com"
-  val AUTH_CLIENT_ID = "dw_explorer_dev"
-  val AUTH_CLIENT_SECRET = "e331cc2e"
+  val AUTH_BASE_URL = Config("auth", "base_url")
+  val AUTH_CLIENT_ID = Config("auth", "client_id")
+  val AUTH_CLIENT_SECRET = Config("auth", "client_secret")
 
   private val logger = LoggerFactory.getLogger(getClass)
 

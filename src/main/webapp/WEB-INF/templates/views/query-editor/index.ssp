@@ -20,7 +20,14 @@
       <div id="treeDoc"></div>
     </div>
     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '元数据'">
-      <div id="treeMetadata"></div>
+      <div id="selDatabase"></div>
+      <div id="loadingTables" style="width: 100%; margin: 10px;">
+        <img src="${uri("/webjars/dojo/1.9.3/dijit/themes/claro/images/loadingAnimation.gif")}" align="top"> 加载中……
+      </div>
+      <div id="divTables" style="margin-top: 10px; display: none;">
+        <div id="txtTable"></div>
+        <ul id="ulTables"></ul>
+      </div>
     </div>
   </div>
 

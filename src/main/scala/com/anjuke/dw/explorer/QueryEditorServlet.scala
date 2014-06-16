@@ -1,18 +1,18 @@
 package com.anjuke.dw.explorer
 
-import org.json4s.Formats
 import org.scalatra.json.JacksonJsonSupport
-import org.json4s.DefaultFormats
 import com.anjuke.dw.explorer.init.DatabaseSessionSupport
 import com.anjuke.dw.explorer.init.AuthenticationSupport
 import com.anjuke.dw.explorer.models.{Task, Doc}
 import java.sql.Timestamp
 import akka.actor.ActorRef
-import org.json4s.JsonAST.JString
 import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
 import org.scalatra.{BadRequest, InternalServerError, NotFound}
 import java.io.File
+import org.json4s._
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
 
 class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     with JacksonJsonSupport with DatabaseSessionSupport with AuthenticationSupport {
@@ -102,33 +102,21 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
         Map("label" -> label, "field" -> label, "sortable" -> false)
       }).toList
 
-      if (columns.isEmpty) {
-        Map("columns" -> Nil)
-      } else {
+      val rows = if (columns.nonEmpty) {
 
-        val rows = lines.take(100).map(line => {
+        lines.take(100).map(line => {
           val cols = line.split("\t")
           val row = for (i <- cols.indices if i < columns.length) yield {
-            (columns(i)("label"), cols(i))
+            (columns(i)("label").asInstanceOf[String], cols(i))
           }
           row.toMap
         }).toList
 
-        if (rows.isEmpty) {
-          Map("columns" -> columns, "rows" -> Nil)
-        } else {
+      } else Nil
 
-          val columnsWidth = columns.map(column => {
-            val width = rows.map(_.getOrElse(column("label"), "").length).filter(_ > 0) match {
-              case widthList if widthList.nonEmpty => widthList.sum / widthList.length
-              case _ => 0
-            }
-            column + ("width" -> (if (width > 5) width else 5) * 8)
-          })
+      val columnsWidth = if (rows.nonEmpty) calcColumnsWidth(columns, rows) else columns
 
-          Map("columns" -> columnsWidth, "rows" -> rows)
-        }
-      }
+      Map("columns" -> columnsWidth, "rows" -> rows)
     }
 
   }
@@ -193,29 +181,96 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     }
   }
 
-  get("/api/metadata/:id") {
+  get("/api/metadata/?") {
     contentType = formats("json")
 
-    params("id") match {
-      case "root" =>
-        val databases = List(
-          Map("id" -> "dw_db", "name" -> "dw_db", "children" -> true),
-          Map("id" -> "dw_stage", "name" -> "dw_stage", "children" -> true),
-          Map("id" -> "dw_extract", "name" -> "dw_extract", "children" -> true),
-          Map("id" -> "dw_db_temp", "name" -> "dw_db_temp", "children" -> true),
-          Map("id" -> "dw_db_test", "name" -> "dw_db_test", "children" -> true)
-        )
-        Map("id" -> "root", "name" -> "Data Warehouse", "children" -> databases)
+    params.get("database") match {
+      case Some(database) =>
 
-      case "dw_db" =>
-        val tables = List(
-          Map("id" -> "dw_db.dw_soj_imp_dtl", "name" -> "dw_soj_imp_dtl"),
-          Map("id" -> "dw_db.dw_soj_imp_dtl_npv", "name" -> "dw_soj_imp_dtl_npv")
-        )
-        Map("id" -> "dw_db", "name" -> "dw_db", "children" -> tables)
+        import dispatch._
+        import dispatch.Defaults._
 
-      case _ => Nil
+        val req = dispatch.url(TaskActor.HIVE_SERVER_URL) / "table" / "list" / database
+        val tables = Http(req OK as.String).map(resultJson => {
+          val result = parse(resultJson)
+          for (JString(table) <- result) yield Map(
+            "id" -> s"$database.$table",
+            "name" -> table
+          )
+        })
+
+        tables()
+
+      case None =>
+        Seq("dw_db", "dw_stage", "dw_extract", "dw_db_temp", "dw_db_test").map(database => {
+          Map("id" -> database, "name" -> database)
+        }).toList
     }
+  }
+
+  get("/api/metadata/desc/?") {
+    contentType = formats("json")
+
+    val database = params("database")
+    val table = params("table")
+
+    import dispatch._
+    import dispatch.Defaults._
+
+    val req = dispatch.url(TaskActor.HIVE_SERVER_URL) / "table" / "desc" / database / table
+    val info = Http(req OK as.String).map(resultJson => {
+        val result = parse(resultJson)
+
+        val partitions = for {
+          JObject(column) <- result \ "columns"
+          JField("partition", JBool(partition)) <- column
+          JField("name", JString(name)) <- column
+          if partition
+        } yield name
+
+        val columns = for {
+          JObject(column) <- result \ "columns"
+          JField("name", JString(name)) <- column
+          JField("type", JString(dataType)) <- column
+          JField("comment", JString(comment)) <- column
+        } yield Map("name" -> name, "type" -> dataType, "comment" -> comment)
+
+        val rows = for (JArray(row) <- result \ "rows") yield {
+          val rowData = for (JString(col) <- row) yield col
+          val pairs = for (i <- rowData.indices) yield (columns(i)("name"), rowData(i))
+          pairs.toMap
+        }
+
+        val size = (result \ "size").extract[Long].toString + "B"
+
+        val info = List(Map(
+          "database" -> database,
+          "table" -> table,
+          "partitions" -> {
+            if (partitions.nonEmpty) partitions.mkString(", ") else "未分区"
+          },
+          "size" -> size
+        ))
+
+        val tableColumns = columns.map(column => {
+          Map(
+            "label" -> column("name"),
+            "field" -> column("name"),
+            "sortable" -> false
+          )
+        })
+
+        val tableColumnsWidth = if (rows.nonEmpty) calcColumnsWidth(tableColumns, rows) else tableColumns
+
+        Map(
+          "info" -> info,
+          "columns" -> columns,
+          "rows" -> rows,
+          "tableColumns" -> tableColumnsWidth
+        )
+    })
+
+    info()
   }
 
   get("/api/doc/:id") {
@@ -362,6 +417,18 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       },
       "updated" -> dfDateTime.format(task.updated)
     )
+  }
+
+  private def calcColumnsWidth(columns: List[Map[String, Any]], rows: List[Map[String, String]]) = {
+
+    columns.map(column => {
+      val width = rows.map(_.getOrElse(column("label").asInstanceOf[String], "").length).filter(_ > 0) match {
+        case widthList if widthList.nonEmpty => widthList.sum / widthList.length
+        case _ => 0
+      }
+      column + ("width" -> (if (width > 5) width else 5) * 8)
+    })
+
   }
 
 }

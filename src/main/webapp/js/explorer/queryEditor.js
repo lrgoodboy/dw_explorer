@@ -5,6 +5,8 @@ define('explorer/queryEditor', [
     'dojo/_base/array',
     'dojo/query',
     'dojo/html',
+    'dojo/dom-style',
+    'dojo/on',
     'dojo/date/locale',
     'dojo/request',
     'dojo/json',
@@ -19,16 +21,19 @@ define('explorer/queryEditor', [
     'dijit/Editor',
     'dijit/Menu',
     'dijit/MenuItem',
+    'dijit/form/Select',
+    'dijit/form/TextBox',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
+    'dgrid/util/misc',
     'dojox/editor/plugins/Save',
     'put-selector/put',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, date, request, json, Memory, JsonRest, Observable, QueryResults,
-            registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem,
-            Grid, OnDemandGrid, Selection, ColumnResizer, EditorSavePlugin, put) {
+], function(declare, lang, config, array, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable, QueryResults,
+            registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem, Select, TextBox,
+            Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, EditorSavePlugin, put) {
 
     var QueryEditor = declare(null, {
 
@@ -218,7 +223,7 @@ define('explorer/queryEditor', [
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
                         store: new Memory({data: result.rows}),
                         columns: result.columns,
-                        className: 'dgrid-autoheight grid-task-result'
+                        className: 'dgrid-autoheight'
                     });
 
                     pane.addChild(gridOutput);
@@ -399,31 +404,172 @@ define('explorer/queryEditor', [
         initMetadata: function() {
             var self = this;
 
+            domStyle.set('loadingTables', 'display', 'none');
+
+            var cache = {};
+
             var store = new JsonRest({
-                target: config.contextPath + '/query-editor/api/metadata/',
-                getChildren: function(object) {
-                    if (object.children !== true) {
-                        return object.children;
+                target: config.contextPath + '/query-editor/api/metadata/'
+            });
+
+            store.query().then(function(databases) {
+
+                var options = [{label: '请选择数据库', value: '', selected: true}];
+                array.forEach(databases, function(database) {
+                    options.push({label: database.id, value: database.name});
+                });
+
+                var select = new Select({
+                    options: options,
+                    autoWidth: true,
+                    style: {width: '100%'}
+                }, 'selDatabase');
+
+                select.on('change', function() {
+
+                    domStyle.set('divTables', 'display', 'none');
+
+                    var database = this.get('value');
+                    if (!database) {
+                        return;
                     }
-                    return this.get(object.id).then(function(fullObject) {
-                        return fullObject.children;
+
+                    var table = this.get('value');
+
+                    if (!(table in cache)) {
+                        domStyle.set('loadingTables', 'display', '');
+                        store.query({database: database}).then(function(tables) {
+                            cache[database] = tables;
+                            domStyle.set('loadingTables', 'display', 'none');
+                            domStyle.set('divTables', 'display', '');
+                        });
+                    } else {
+                        domStyle.set('divTables', 'display', '');
+                    }
+
+                });
+
+                select.startup();
+            });
+
+            // search box
+            var txtTable = new TextBox({
+                placeHolder: '请输入表名关键字',
+                trim: true,
+                style: {width: '100%'}
+            }, 'txtTable');
+
+            var searchTable = dgridUtil.debounce(function() {
+
+                var database = registry.byId('selDatabase').get('value');
+                var table = registry.byId('txtTable').get('value');
+
+                var MAX = 20;
+                var result = [];
+
+                if (!table) {
+                    for (var i = 0; i < MAX && i < cache[database].length; ++i) {
+                        result.push(cache[database][i]);
+                    }
+                } else {
+
+                    array.every(cache[database], function(object) {
+                        if (object.name.indexOf(table) !== -1) {
+                            result.push(object);
+                        }
+                        return result.length < MAX;
+                    });
+
+                }
+
+                var ulTables = query('#ulTables')[0];
+                query('li', ulTables).forEach(function(li) {
+                    put(li, '!');
+                });
+
+                if (result.length == 0) {
+                    put(ulTables, 'li', '查无结果');
+                } else {
+                    array.forEach(result, function(object) {
+                        var li = put(ulTables, 'li');
+                        var anchor =  put(li, 'a[href="javascript:void(0);"]', object.name);
+                        on(anchor, 'click', function() {
+                            var segs = object.id.split(/\./);
+                            self.descTable(segs[0], segs[1]);
+                        });
                     });
                 }
+
+            }, null, 500);
+
+            txtTable.on('input', function(evt) {
+                searchTable();
             });
 
-            var model = new ObjectStoreModel({
-                store: store,
-                getRoot: function(onItem) {
-                    this.store.get('root').then(onItem);
-                },
-                mayHaveChildren: function(item) {
-                    return 'children' in item;
+            txtTable.startup();
+        },
+
+        descTable: function(database, table) {
+            var self = this;
+
+            var pane = new ContentPane({
+                title: '表信息[' + table + ']',
+                closable: true
+            });
+
+            var bottomCol = registry.byId('bottomCol');
+            bottomCol.addChild(pane);
+            bottomCol.selectChild(pane);
+
+            var loading = put(pane.domNode, 'div[style="width: 100%; margin: 10px;"]');
+            put(loading, 'img[src="' + config.contextPath + '/webjars/dojo/1.9.3/dijit/themes/claro/images/loadingAnimation.gif"][align="top"]');
+            put(loading, 'span', '加载中……');
+
+            request(config.contextPath + '/query-editor/api/metadata/desc/', {
+                query: {database: database, table: table},
+                handleAs: 'json'
+            }).then(function(result) {
+
+                put(loading, '!');
+
+                if (result.columns.length == 0) {
+                    put(pane.domNode, 'div[style="color: red;"]', '加载失败');
+                    return;
                 }
-            });
 
-            self.treeMetadata = new Tree({
-                model: model
-            }, 'treeMetadata');
+                var infoGrid  = new Grid({
+                    className: 'dgrid-autoheight',
+                    columns: [
+                        {label: '数据库', field: 'database', sortable: false},
+                        {label: '表名', field: 'table', sortable: false},
+                        {label: '分区字段', field: 'partitions', sortable: false},
+                        {label: '整表大小', field: 'size', sortable: false}
+                    ]
+                });
+
+                infoGrid.renderArray(result.info);
+                pane.addChild(infoGrid);
+
+                var columnGrid = new Grid({
+                    className: 'dgrid-autoheight',
+                    columns: [
+                        {label: '字段名', field: 'name', sortable: false},
+                        {label: '类型', field: 'type', sortable: false},
+                        {label: '注释', field: 'comment', sortable: false}
+                    ]
+                });
+
+                columnGrid.renderArray(result.columns);
+                pane.addChild(columnGrid);
+
+                var rowGrid  = new (declare([Grid, ColumnResizer]))({
+                    className: 'dgrid-autoheight',
+                    columns: result.tableColumns
+                });
+
+                rowGrid.renderArray(result.rows);
+                pane.addChild(rowGrid);
+            });
         },
 
         _theEnd: undefined

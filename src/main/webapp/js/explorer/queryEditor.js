@@ -442,9 +442,13 @@ define('explorer/queryEditor', [
                             cache[database] = tables;
                             domStyle.set('loadingTables', 'display', 'none');
                             domStyle.set('divTables', 'display', '');
+                            txtTable.set('value', '');
+                            searchTable();
                         });
                     } else {
                         domStyle.set('divTables', 'display', '');
+                        txtTable.set('value', '');
+                        searchTable();
                     }
 
                 });
@@ -561,6 +565,8 @@ define('explorer/queryEditor', [
 
                 columnGrid.renderArray(result.columns);
                 pane.addChild(columnGrid);
+
+                put(pane.domNode, 'div.task-result-header', '样本数据');
 
                 var rowGrid  = new (declare([Grid, ColumnResizer]))({
                     className: 'dgrid-autoheight',

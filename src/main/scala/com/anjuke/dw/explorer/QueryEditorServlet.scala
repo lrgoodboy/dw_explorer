@@ -33,7 +33,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     contentType = formats("json")
 
     val queries = (parsedBody \ "queries").extractOpt[String].map(_.trim).filter(!_.isEmpty) match {
-      case Some(queries) => queries
+      case Some(queries) => queries.replace("${dealDate}", "'" + dealDate + "'")
       case None => halt(BadRequest("Queries cannot be empty."))
     }
 
@@ -429,6 +429,12 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       column + ("width" -> (if (width > 5) width else 5) * 8)
     })
 
+  }
+
+  private def dealDate = {
+    val cal = Calendar.getInstance
+    cal.add(Calendar.DATE, -1)
+    new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime)
   }
 
 }

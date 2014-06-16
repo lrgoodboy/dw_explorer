@@ -125,11 +125,13 @@ class TaskActor extends Actor {
           case _ => throw new Exception("Fail to fetch task status - " + (result \ "msg").extractOrElse[String]("unknown reason"))
         }
       })
-
       remoteStatusFuture() match {
         case 'break => return
         case _ =>
           if (Task.isInterrupted(taskId)) {
+            val cancelReq = dispatch.url(HIVE_SERVER_URL) / "task" / "cancel" / remoteTaskId
+            val cancelRes = Http(cancelReq OK as.String)
+            cancelRes()
             throw new Exception("Task is interrupted.")
           }
           TimeUnit.SECONDS.sleep(3)

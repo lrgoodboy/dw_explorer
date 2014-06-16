@@ -3,22 +3,18 @@ package com.anjuke.dw.explorer.init
 import org.squeryl.Session
 import org.squeryl.SessionFactory
 import org.squeryl.adapters.MySQLAdapter
-
 import com.mchange.v2.c3p0.ComboPooledDataSource
+import com.anjuke.dw.explorer.util.Config
 
 trait DatabaseInit {
-
-  val databaseUsername = "root"
-  val databasePassword = "password"
-  val databaseConnection = "jdbc:mysql://localhost:3306/dw_explorer?useUnicode=true&characterEncoding=utf-8"
 
   var cpds = new ComboPooledDataSource
 
   def configureDb() {
-    cpds.setDriverClass("com.mysql.jdbc.Driver")
-    cpds.setJdbcUrl(databaseConnection)
-    cpds.setUser(databaseUsername)
-    cpds.setPassword(databasePassword)
+    cpds.setDriverClass(Config("database", "jdbc.driver"))
+    cpds.setJdbcUrl(Config("database", "jdbc.url"))
+    cpds.setUser(Config("database", "jdbc.user"))
+    cpds.setPassword(Config("database", "jdbc.password"))
 
     cpds.setMinPoolSize(2)
     cpds.setAcquireIncrement(1)

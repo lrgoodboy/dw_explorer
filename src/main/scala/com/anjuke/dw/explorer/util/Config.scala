@@ -6,12 +6,12 @@ object Config {
 
   private val configMap = Seq("database", "auth").map(section => {
     val config = new CompositeConfiguration
-    config.addConfiguration(new PropertiesConfiguration(s"${section}.properties"))
     try {
       config.addConfiguration(new PropertiesConfiguration(s"override/${section}.properties"))
     } catch {
       case e: ConfigurationException =>
     }
+    config.addConfiguration(new PropertiesConfiguration(s"${section}.properties"))
     (section, config: Configuration)
   }).toMap
 

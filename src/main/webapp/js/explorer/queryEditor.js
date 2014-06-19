@@ -344,6 +344,7 @@ define('explorer/queryEditor', [
                             pane.addChild(layout);
 
                             central.addChild(pane);
+                            central.selectChild(pane);
 
                             // editor
                             var editor = CodeMirror(editorPane.domNode, {
@@ -368,8 +369,6 @@ define('explorer/queryEditor', [
                                self.submitTask(editor.getValue());
                             });
 
-                            // select the tab
-                            central.selectChild(pane);
                         });
                     }
                 }, 'treeDoc');

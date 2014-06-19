@@ -16,24 +16,27 @@ define('explorer/queryEditor', [
     'dojo/store/util/QueryResults',
     'dijit/registry',
     'dijit/layout/ContentPane',
+    'dijit/layout/LayoutContainer',
     'dijit/Tree',
     'dijit/tree/ObjectStoreModel',
-    'dijit/Editor',
     'dijit/Menu',
     'dijit/MenuItem',
     'dijit/form/Select',
     'dijit/form/TextBox',
+    'dijit/form/Button',
+    'dijit/Toolbar',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
     'dgrid/util/misc',
-    'dojox/editor/plugins/Save',
     'put-selector/put',
+    'cm/lib/codemirror',
+    'cm/mode/sql/sql',
     'dojo/domReady!'
 ], function(declare, lang, config, array, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable, QueryResults,
-            registry, ContentPane, Tree, ObjectStoreModel, Editor, Menu, MenuItem, Select, TextBox,
-            Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, EditorSavePlugin, put) {
+            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, Toolbar,
+            Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror) {
 
     var QueryEditor = declare(null, {
 
@@ -295,21 +298,53 @@ define('explorer/queryEditor', [
 
                         rest.get(item.id).then(function(object) {
 
+                            // http://dojotoolkit.org/reference-guide/1.10/dijit/layout.html
+                            // layout
                             var pane = new ContentPane({
                                 id: paneId,
                                 title: object.name,
                                 closable: true
                             });
 
-                            var docUrl = config.contextPath + '/query-editor/api/doc/content/' + item.id;
-
-                            var editor = new Editor({
-                                plugins: ['undo', 'redo', '|', {name: 'save', url: docUrl}, '|', 'runner'],
-                                value: object.content
+                            var layout = new LayoutContainer({
+                                style: 'width: 100%; height: 100%; border: 1px solid silver;'
                             });
 
-                            pane.addChild(editor);
+                            var toolbarPane = new ContentPane({
+                                region: 'top',
+                                style: 'padding: 0;'
+                            });
+
+                            var toolbar = new Toolbar();
+
+                            var button = new Button({
+                                label: 'Save'
+                            });
+
+                            toolbar.addChild(button);
+                            toolbarPane.addChild(toolbar);
+                            layout.addChild(toolbarPane);
+
+                            var editorPane = new ContentPane({
+                                region: 'center',
+                                style: 'height: 100%; padding: 0;'
+                            });
+
+                            layout.addChild(editorPane);
+                            pane.addChild(layout);
+
                             central.addChild(pane);
+                            layout.startup();
+
+                            // editor
+                            var docUrl = config.contextPath + '/query-editor/api/doc/content/' + item.id;
+
+                            var editor = CodeMirror(editorPane.domNode, {
+                                value: object.content,
+                                mode: 'text/x-hive'
+                            });
+
+                            // select the tab
                             central.selectChild(pane);
                         });
                     }

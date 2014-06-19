@@ -317,11 +317,21 @@ define('explorer/queryEditor', [
 
                             var toolbar = new Toolbar();
 
-                            var button = new Button({
+                            var btnSave = new Button({
                                 label: 'Save'
                             });
+                            toolbar.addChild(btnSave);
 
-                            toolbar.addChild(button);
+                            var btnRunSelected = new Button({
+                                label: 'Run Selected'
+                            });
+                            toolbar.addChild(btnRunSelected);
+
+                            var btnRunAll = new Button({
+                                label: 'Run All'
+                            });
+                            toolbar.addChild(btnRunAll);
+
                             toolbarPane.addChild(toolbar);
                             layout.addChild(toolbarPane);
 
@@ -334,14 +344,28 @@ define('explorer/queryEditor', [
                             pane.addChild(layout);
 
                             central.addChild(pane);
-                            layout.startup();
 
                             // editor
-                            var docUrl = config.contextPath + '/query-editor/api/doc/content/' + item.id;
-
                             var editor = CodeMirror(editorPane.domNode, {
                                 value: object.content,
                                 mode: 'text/x-hive'
+                            });
+
+                            btnSave.on('click', function() {
+
+                                rest.put({
+                                    id: item.id,
+                                    content: editor.getValue()
+                                });
+
+                            });
+
+                            btnRunSelected.on('click', function() {
+                               self.submitTask(editor.getSelection());
+                            });
+
+                            btnRunAll.on('click', function() {
+                               self.submitTask(editor.getValue());
                             });
 
                             // select the tab

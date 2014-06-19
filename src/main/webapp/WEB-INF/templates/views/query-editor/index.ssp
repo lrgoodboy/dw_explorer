@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="${uri("/webjars/dojo/1.9.3/dijit/themes/claro/claro.css")}">
 <link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/dgrid.css")}">
 <link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/skins/claro.css")}">
-<link rel="stylesheet" href="${uri("/webjars/dojo/1.9.3/dojox/editor/plugins/resources/css/Save.css")}">
+<link rel="stylesheet" href="${uri("/webjars/codemirror/4.2/lib/codemirror.css")}">
 <link rel="stylesheet" href="${uri("/css/query-editor.css")}">
 </head>
 <body class="claro">
@@ -47,6 +47,7 @@ var dojoConfig = {
         {name: 'put-selector', location: '${uri("/js/put-selector-0.3.5")}'},
         {name: 'xstyle', location: '${uri("/js/xstyle-0.1.3")}'},
         {name: 'dgrid', location: '${uri("/webjars/dgrid/0.3.14")}'},
+        {name: 'cm', location: '${uri("/webjars/codemirror/4.2")}'},
         {name: 'explorer', location: '${uri("/js/explorer")}'}
     ],
     contextPath: '${contextPath}'
@@ -59,7 +60,6 @@ require([
     'dijit/layout/BorderContainer',
     'dijit/layout/TabContainer',
     'dijit/layout/ContentPane',
-    'explorer/Runner',
     'explorer/queryEditor'
 ]);
 </script>

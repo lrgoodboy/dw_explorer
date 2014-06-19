@@ -41,7 +41,8 @@ object DwExplorerBuild extends Build {
         "net.databinder.dispatch" %% "dispatch-core" % "0.11.1",
         "org.webjars" % "dgrid" % "0.3.14",
         "org.apache.poi" % "poi-ooxml" % "3.10-FINAL",
-        "commons-configuration" % "commons-configuration" % "1.10"
+        "commons-configuration" % "commons-configuration" % "1.10",
+        "org.webjars" % "codemirror" % "4.2"
       ),
       scalateTemplateConfig in Compile <<= (sourceDirectory in Compile){ base =>
         Seq(

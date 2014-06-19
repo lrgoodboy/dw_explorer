@@ -348,15 +348,6 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     }
   }
 
-  post("/api/doc/content/:id") {
-    Doc.lookup(params("id").toLong) match {
-      case Some(doc) if (doc.userId == user.id && doc.isDeleted == false) =>
-        Doc.updatePartial(id = doc.id, content = Some(request.body))
-        Unit
-      case _ => halt(BadRequest())
-    }
-  }
-
   put("/api/doc/:id") {
     contentType = formats("json")
 

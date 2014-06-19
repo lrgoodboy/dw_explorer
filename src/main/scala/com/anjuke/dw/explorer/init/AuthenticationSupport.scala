@@ -22,7 +22,7 @@ trait AuthenticationSupport extends ScentrySupport[User] {
 
   private val logger = LoggerFactory.getLogger(getClass)
 
-  protected def requireLogin() = {
+  protected def requireLogin() {
     if (!isAuthenticated) {
       val queryString = Option(request.getQueryString) match {
         case Some(s) => "?" + s

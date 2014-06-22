@@ -7,7 +7,7 @@ import dispatch.Defaults._
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
-import com.anjuke.dw.explorer.models.Task
+import com.anjuke.dw.explorer.models.{Task, User}
 import java.io.FileWriter
 import java.util.concurrent.TimeUnit
 import java.sql.Timestamp
@@ -56,7 +56,7 @@ class TaskActor extends Actor {
     Task.updateStatus(task.id, Task.STATUS_RUNNING)
 
     try {
-      execute(task.id, "SET hive.cli.print.header = true;\n" + task.queries)
+      execute(task)
       Task.updateStatus(task.id, Task.STATUS_OK, duration = Some(calcDuration(task.created)))
       logger.info(s"Task ${task.id} finished.")
     } catch {
@@ -73,12 +73,36 @@ class TaskActor extends Actor {
     (durationMilli / 1000).asInstanceOf[Int]
   }
 
-  def execute(taskId: Long, queries: String) {
+  def execute(task: Task) {
+
+    val prefix = s"${User.lookup(task.userId).get.username}-${task.id}"
+
+    val ptrnBuffer = "(?i)^(SET|ADD\\s+JAR|CREATE\\s+TEMPORARY\\s+FUNCTION|USE)\\s+".r
+    val ptrnExport = "(?i)^EXPORT\\s+(HIVE|MYSQL)\\s+".r
+
+    val buffer = new StringBuilder("SET hive.cli.print.header = true;\n")
+
+    for (sql <- normalizeQueries(task.queries)) {
+
+      if (ptrnBuffer.findFirstIn(sql).nonEmpty) {
+        buffer ++= sql + ";\n"
+      } else if (ptrnExport.findFirstIn(sql).nonEmpty) {
+        executeUpdate(task.id, prefix, sql)
+      } else {
+        executeUpdate(task.id, prefix, buffer.toString + sql)
+      }
+
+    }
+
+    Task.updateStatus(task.id, Task.STATUS_OK)
+  }
+
+  def executeUpdate(taskId: Long, prefix: String, sql: String) {
 
     // send request
     val submitReq = (dispatch.url(HIVE_SERVER_URL) / "task" / "submit").POST
         .setContentType("application/json", "UTF-8")
-        .setBody(compact(render(Map("query" -> queries))))
+        .setBody(compact(render(Map("query" -> sql, "prefix" -> prefix))))
 
     val remoteTaskIdFuture = Http(submitReq OK as.String).map(resultJson => {
       val result = parse(resultJson)
@@ -89,11 +113,20 @@ class TaskActor extends Actor {
     })
 
     val remoteTaskId = remoteTaskIdFuture()
-    logger.info("Task submitted, remote id: " + remoteTaskId)
+    logger.info(s"Remote task submmitted, id: $remoteTaskId")
 
     // wait for completion
     while (!Thread.interrupted) {
 
+      // check task status
+      if (Task.isInterrupted(taskId)) {
+        val cancelReq = dispatch.url(HIVE_SERVER_URL) / "task" / "cancel" / remoteTaskId
+        val cancelRes = Http(cancelReq OK as.String)
+        cancelRes()
+        throw new Exception("Task is interrupted.")
+      }
+
+      // check remote task status
       val statusReq = dispatch.url(HIVE_SERVER_URL) / "task" / "status" / remoteTaskId
 
       val remoteStatusFuture = Http(statusReq OK as.String).map(resultJson => {
@@ -115,7 +148,6 @@ class TaskActor extends Actor {
 
                 outputWriter.close
 
-                Task.updateStatus(taskId, Task.STATUS_OK)
                 'break
 
               case JString("error") => throw new Exception((result \ "taskErrorMessage").extract[String])
@@ -125,17 +157,12 @@ class TaskActor extends Actor {
           case _ => throw new Exception("Fail to fetch task status - " + (result \ "msg").extractOrElse[String]("unknown reason"))
         }
       })
+
       remoteStatusFuture() match {
         case 'break => return
-        case _ =>
-          if (Task.isInterrupted(taskId)) {
-            val cancelReq = dispatch.url(HIVE_SERVER_URL) / "task" / "cancel" / remoteTaskId
-            val cancelRes = Http(cancelReq OK as.String)
-            cancelRes()
-            throw new Exception("Task is interrupted.")
-          }
-          TimeUnit.SECONDS.sleep(3)
+        case _ => TimeUnit.SECONDS.sleep(3)
       }
+
     }
   }
 
@@ -143,6 +170,10 @@ class TaskActor extends Actor {
     val fw = new FileWriter(file, true)
     fw.write(log)
     fw.close
+  }
+
+  private def normalizeQueries(queries: String) = {
+    "(?s)/\\*.*?\\*/".r.replaceAllIn(queries, "").split(";").map(_.trim).filter(_.nonEmpty)
   }
 
 }

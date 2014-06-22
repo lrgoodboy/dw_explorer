@@ -108,11 +108,15 @@ define('explorer/queryEditor', [
                 }
             }));
             menu.addChild(new MenuItem({
-                label: '取消任务'
+                label: '取消任务',
+                onClick: function() {
+                    var task = getSelectedTask();
+                    request(config.contextPath + '/query-editor/api/task/cancel/' + task.id);
+                }
             }));
-            menu.addChild(new MenuItem({
+            /*menu.addChild(new MenuItem({
                 label: '删除任务'
-            }));
+            }));*/
 
             var updated = null;
 

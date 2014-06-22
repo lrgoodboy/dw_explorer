@@ -59,7 +59,8 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     Task.STATUS_NEW -> "等待中",
     Task.STATUS_RUNNING -> "运行中",
     Task.STATUS_OK -> "运行成功",
-    Task.STATUS_ERROR -> "运行失败"
+    Task.STATUS_ERROR -> "运行失败",
+    Task.STATUS_INTERRUPTED -> "取消中"
   )
 
   get("/api/task/?") {
@@ -83,6 +84,20 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     contentType = formats("json")
     val task = Task.lookup(params("id").toLong).get
     formatTask(task)
+  }
+
+  get("/api/task/cancel/:id") {
+    val taskId = params("id").toLong
+    Task.lookup(taskId) match {
+      case Some(task) =>
+        if (task.userId == user.id && (task.status == Task.STATUS_NEW || task.status == Task.STATUS_RUNNING)) {
+          Task.updateStatus(taskId, Task.STATUS_INTERRUPTED);
+        } else {
+          halt(BadRequest())
+        }
+      case None => halt(NotFound())
+    }
+    Unit
   }
 
   get("/api/task/output/:id") {

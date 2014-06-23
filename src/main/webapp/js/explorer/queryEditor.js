@@ -45,6 +45,7 @@ define('explorer/queryEditor', [
             self.initTaskStatus();
             self.initDocument();
             self.initMetadata();
+            self.initTemplate();
         },
 
         initTaskStatus: function() {
@@ -638,6 +639,53 @@ define('explorer/queryEditor', [
                 rowGrid.renderArray(result.rows);
                 pane.addChild(rowGrid);
             });
+        },
+
+        initTemplate: function() {
+            var self = this;
+
+            var store = Memory({
+                data: [
+                    {id: 'root'},
+
+                    {id: 'udf', name: 'UDF', isFolder: true, parent: 'root'},
+                    {id: 'substring_index', name: 'SUBSTRING_INDEX', isFolder: false, parent: 'udf'},
+                    {id: 'rank', name: 'RANK', isFolder: false, parent: 'udf'},
+
+                    {id: 'optimize', name: '优化选项', isFolder: true, parent: 'root'},
+                    {id: 'reducer', name: 'Reducer数量', isFolder: false, parent: 'optimize'},
+                    {id: 'mapjoin', name: 'Map-side Join', isFolder: false, parent: 'optimize'}
+                ],
+                getChildren: function(object) {
+                    return this.query({parent: object.id}, {
+                        sort: [
+                            {attribute: 'isFolder', descending: true},
+                            {attribute: 'name', descending: false}
+                        ]
+                    });
+                }
+            });
+
+            var model = new ObjectStoreModel({
+                store: store,
+                query: {id: 'root'},
+                mayHaveChildren: function(item) {
+                    return item.isFolder;
+                },
+            });
+
+            var tree = new Tree({
+                model: model,
+                showRoot: false,
+                onDblClick: function(item) {
+
+                    if (item.isFolder) {
+                        return;
+                    }
+
+                    console.log(item);
+                }
+            }, 'treeTemplate');
         },
 
         _theEnd: undefined

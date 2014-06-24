@@ -137,7 +137,7 @@ class TaskActor extends Actor {
               case JString("ok") =>
 
                 // read standard output
-                val outputWriter = new FileWriter(outputFile(taskId))
+                val outputWriter = new FileWriter(outputFile(taskId), true)
 
                 val outputReq = dispatch.url(HIVE_SERVER_URL) / "task" / "output" / remoteTaskId
                 val outputFuture = Http(outputReq > as.stream.Lines(line => {

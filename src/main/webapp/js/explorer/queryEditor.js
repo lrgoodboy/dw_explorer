@@ -45,6 +45,7 @@ define('explorer/queryEditor', [
             self.initTaskStatus();
             self.initDocument();
             self.initMetadata();
+            self.initTemplate();
         },
 
         initTaskStatus: function() {
@@ -356,6 +357,8 @@ define('explorer/queryEditor', [
                                 mode: 'text/x-hive'
                             });
 
+                            pane.codeMirror = editor;
+
                             btnSave.on('click', function() {
 
                                 rest.put({
@@ -638,6 +641,62 @@ define('explorer/queryEditor', [
                 rowGrid.renderArray(result.rows);
                 pane.addChild(rowGrid);
             });
+        },
+
+        initTemplate: function() {
+            var self = this;
+
+            var store = Memory({
+                data: [
+                    {id: 'root'},
+
+                    {id: 'stmt', name: '常用语句', isFolder: true, parent: 'root'},
+                    {id: 'stmt-create', name: 'CREATE TABLE', isFolder: false, parent: 'stmt', content: 'CREATE TABLE db.table (\n  col1 type,\n  col2 type\n)\nPARTITIONED BY (col3 STRING)\nROW FORMAT DELIMITED FIELDS TERMINATED BY \'\\t\';\n'},
+                    {id: 'stmt-insert', name: 'INSERT OVERWRITE', isFolder: false, parent: 'stmt', content: 'INSERT OVERWRITE TABLE db.table PARTITION (col3 = ${dealDate})\nAS SELECT\n  col1,\n  col2\nFROM db.table;\n'},
+
+                    {id: 'udf', name: 'UDF', isFolder: true, parent: 'root'},
+                    {id: 'udf-substring_index', name: 'SUBSTRING_INDEX', isFolder: false, parent: 'udf', content: 'ADD JAR hdfs://10.20.8.70:8020/user/hadoop/udf/SubStringIndexUDF.jar;\nCREATE TEMPORARY FUNCTION SUBSTRING_INDEX AS \'com.anjuke.dw.hive.udf.SubStringIndex\';\n'},
+                    {id: 'utf-rank', name: 'RANK', isFolder: false, parent: 'udf', content: 'ADD JAR hdfs://10.20.8.70:8020/user/hadoop/udf/RankUDF.jar;\nCREATE TEMPORARY FUNCTION RANK AS \'com.anjuke.dw.hive.udf.Rank\';\n'},
+                    {id: 'utf-md5', name: 'MD5', isFolder: false, parent: 'udf', content: 'ADD JAR hdfs://10.20.8.70:8020/user/hadoop/udf/MD5UDF.jar;\nCREATE TEMPORARY FUNCTION MD5 AS \'com.anjuke.dw.hive.udf.MD5\';\n'},
+
+                    {id: 'opt', name: '优化选项', isFolder: true, parent: 'root'},
+                    {id: 'opt-reducer', name: 'Reducer数量', isFolder: false, parent: 'opt', content: 'SET mapred.reducer.tasks = 20;\n'},
+                    {id: 'opt-mapjoin', name: 'Map-side Join', isFolder: false, parent: 'opt', content: 'SET hive.auto.convert.join = true;\n'}
+                ],
+                getChildren: function(object) {
+                    return this.query({parent: object.id});
+                }
+            });
+
+            var model = new ObjectStoreModel({
+                store: store,
+                query: {id: 'root'},
+                mayHaveChildren: function(item) {
+                    return item.isFolder;
+                },
+            });
+
+            var tree = new Tree({
+                model: model,
+                showRoot: false,
+                onDblClick: function(item) {
+
+                    if (item.isFolder) {
+                        return;
+                    }
+
+                    var central = registry.byId('central');
+                    var pane = central.selectedChildWidget;
+
+                    if (typeof pane == 'undefined') {
+                        alert('请先打开一个文档。');
+                        return;
+                    }
+
+                    var editor = pane.codeMirror;
+                    editor.replaceRange(item.content, editor.getCursor());
+                }
+            }, 'treeTemplate');
         },
 
         _theEnd: undefined

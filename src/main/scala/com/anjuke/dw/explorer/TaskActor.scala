@@ -80,7 +80,7 @@ class TaskActor extends Actor {
     val ptrnBuffer = "(?i)^(SET|ADD\\s+JAR|CREATE\\s+TEMPORARY\\s+FUNCTION|USE)\\s+".r
     val ptrnExport = "(?i)^EXPORT\\s+(HIVE|MYSQL)\\s+".r
 
-    val buffer = new StringBuilder("SET hive.cli.print.header = true;\n")
+    val buffer = new StringBuilder("SET hive.mapred.mode = strict;\nSET hive.cli.print.header = true;\n")
 
     for (sql <- normalizeQueries(task.queries)) {
 

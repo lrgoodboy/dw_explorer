@@ -34,7 +34,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     contentType = formats("json")
 
     val queries = (parsedBody \ "queries").extractOpt[String].map(_.trim).filter(!_.isEmpty) match {
-      case Some(queries) => queries.replace("${dealDate}", "'" + dealDate + "'")
+      case Some(queries) => replaceParameters(queries)
       case None => halt(BadRequest("Queries cannot be empty."))
     }
 
@@ -436,6 +436,22 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       column + ("width" -> (if (width > 5) width else 5) * 8)
     })
 
+  }
+
+  private def replaceParameters(queries: String) = {
+
+    val parameters = Map(
+      "dealDate" -> ("'" + dealDate + "'"),
+      "outFileSuffix" -> dealDate.replace("-", "")
+    )
+
+    var result = queries
+    parameters.foreach {
+      case (p, v) =>
+        result = result.replace("${" + p + "}", v)
+    }
+
+    result
   }
 
   private def dealDate = {

@@ -75,23 +75,11 @@ class TaskActor extends Actor {
 
   def execute(task: Task) {
 
-    val prefix = s"${User.lookup(task.userId).get.username}-${task.id}"
+    val user = User.lookup(task.userId).get
+    val prefix = s"${user.username}-${task.id}"
 
-    val ptrnBuffer = "(?i)^(SET|ADD\\s+JAR|CREATE\\s+TEMPORARY\\s+FUNCTION|USE)\\s+".r
-    val ptrnExport = "(?i)^EXPORT\\s+(HIVE|MYSQL)\\s+".r
-
-    val buffer = new StringBuilder("SET hive.mapred.mode = strict;\nSET hive.cli.print.header = true;\n")
-
-    for (sql <- normalizeQueries(task.queries)) {
-
-      if (ptrnBuffer.findFirstIn(sql).nonEmpty) {
-        buffer ++= sql + ";\n"
-      } else if (ptrnExport.findFirstIn(sql).nonEmpty) {
-        executeUpdate(task.id, prefix, sql)
-      } else {
-        executeUpdate(task.id, prefix, buffer.toString + sql)
-      }
-
+    for (sql <- parseQueries(task.queries, user)) {
+      executeUpdate(task.id, prefix, sql)
     }
 
     Task.updateStatus(task.id, Task.STATUS_OK)
@@ -174,6 +162,76 @@ class TaskActor extends Actor {
 
   private def normalizeQueries(queries: String) = {
     "(?s)/\\*.*?\\*/".r.replaceAllIn(queries, "").split(";").map(_.trim).filter(_.nonEmpty)
+  }
+
+  private def checkPrivilege(user: User, database: String) {
+    if (user.isRole(User.ROLE_DW)) {
+      return
+    } else if (user.isRole(User.ROLE_BI)) {
+      if (Seq("dw_db_temp", "dw_db_test") contains database) {
+        return
+      }
+    }
+    throw new Exception("Access denied.")
+  }
+
+  private def parseQueries(queries: String, user: User) = {
+
+    val ptrnBuffer = "(?i)^(SET|ADD\\s+JAR|CREATE\\s+TEMPORARY\\s+FUNCTION|USE)\\s+".r
+    val ptrnExport = "(?i)^EXPORT\\s+(HIVE|MYSQL)\\s+\\w+\\.\\w+\\s+TO\\s+(MYSQL|HIVE)\\s+(\\w+)\\.\\w+".r
+    val ptrnManipulateDatabase = "(?i)^(CREATE|DROP|ALTER)\\s+(DATABASE|SCHEMA)\\s+".r
+    val ptrnCreateTable = "(?i)^CREATE\\s+(EXTERNAL\\s+)?TABLE\\s+(IF\\s+NOT\\s+EXISTS\\s+)?((\\w+)\\.)?\\w+".r
+    val ptrnDropTable = "(?i)^DROP\\s+TABLE\\s+(IF\\s+EXISTS\\s+)?((\\w+)\\.)?\\w+".r
+    val ptrnAlterTable = "(?i)^ALTER\\s+TABLE\\s+".r
+
+    val ptrnChangeDatabase = "(?i)^USE\\s+(\\w+)".r
+    var currentDatabase = "default"
+
+    val buffer = new StringBuilder
+    val fixedBuffer = "SET hive.mapred.mode = strict;\nSET hive.cli.print.header = true;\n"
+
+    def parseQuery(sql: String): Option[String] = {
+
+      currentDatabase = ptrnChangeDatabase.findFirstMatchIn(sql) match {
+        case Some(m) => m.group(1)
+        case None => currentDatabase
+      }
+
+      if (ptrnBuffer.findFirstIn(sql).nonEmpty) {
+        buffer ++= sql + ";\n"
+        return None
+      }
+
+      ptrnExport.findFirstMatchIn(sql) match {
+        case Some(m) =>
+          checkPrivilege(user, m.group(3))
+          return Some(sql)
+        case None =>
+      }
+
+      if (ptrnManipulateDatabase.findFirstIn(sql).nonEmpty) {
+        throw new Exception("Unable to manipulate database.")
+      }
+
+      ptrnCreateTable.findFirstMatchIn(sql) match {
+        case Some(m) => checkPrivilege(user, if (m.group(4) != null) m.group(4) else currentDatabase)
+        case None =>
+      }
+
+      ptrnDropTable.findFirstMatchIn(sql) match {
+        case Some(m) => checkPrivilege(user, if (m.group(3) != null) m.group(3) else currentDatabase)
+        case None =>
+      }
+
+      if (ptrnAlterTable.findFirstIn(sql).nonEmpty) {
+        checkPrivilege(user, currentDatabase)
+      }
+
+      Some(buffer.toString + fixedBuffer + sql)
+    }
+
+    normalizeQueries(queries).map(parseQuery _).filter(_.nonEmpty).map(_.get)
+
   }
 
 }

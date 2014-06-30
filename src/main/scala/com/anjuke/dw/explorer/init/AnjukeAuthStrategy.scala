@@ -54,6 +54,7 @@ class AnjukeAuthStrategy(protected val app: ScalatraBase, protected val scentryC
               val user = new User(username = username,
                                   truename = (userInfo \ "chinese_name").extract[String],
                                   email = (userInfo \ "email").extract[String],
+                                  role = User.ROLE_BI,
                                   created = new Timestamp(System.currentTimeMillis))
               User.create(user)
           }

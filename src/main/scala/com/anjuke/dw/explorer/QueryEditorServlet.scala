@@ -3,7 +3,7 @@ package com.anjuke.dw.explorer
 import org.scalatra.json.JacksonJsonSupport
 import com.anjuke.dw.explorer.init.DatabaseSessionSupport
 import com.anjuke.dw.explorer.init.AuthenticationSupport
-import com.anjuke.dw.explorer.models.{Task, Doc}
+import com.anjuke.dw.explorer.models.{Task, Doc, User}
 import java.sql.Timestamp
 import akka.actor.ActorRef
 import java.util.{Calendar, Date}
@@ -25,6 +25,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   }
 
   get("/index") {
+    requireRole(User.ROLE_BI)
     contentType = "text/html"
     ssp("query-editor/index", "layout" -> "", "version" -> Config("common", "version"))
   }

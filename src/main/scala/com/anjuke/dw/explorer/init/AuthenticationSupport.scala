@@ -2,6 +2,7 @@ package com.anjuke.dw.explorer.init
 
 import org.scalatra.ScalatraBase
 import org.scalatra.auth.ScentrySupport
+import org.scalatra.Forbidden
 import org.slf4j.LoggerFactory
 import com.anjuke.dw.explorer.models.User
 import org.scalatra.auth.ScentryConfig
@@ -31,6 +32,13 @@ trait AuthenticationSupport extends ScentrySupport[User] {
       val requestUrl = request.getRequestURL.toString + queryString
       val returnTo = URLEncoder.encode(requestUrl, "UTF-8")
       redirect(s"${scentryConfig.login}?${scentryConfig.returnToKey}=$returnTo")
+    }
+  }
+
+  protected def requireRole(role: Int) = {
+    requireLogin()
+    if (!user.isRole(role)) {
+      halt(Forbidden("您无权访问该页面，请联系dl-data-dw@anjuke.com，谢谢。"))
     }
   }
 

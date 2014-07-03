@@ -443,7 +443,8 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
     val parameters = Map(
       "dealDate" -> ("'" + dealDate + "'"),
-      "outFileSuffix" -> dealDate.replace("-", "")
+      "outFileSuffix" -> dealDate,
+      "dateSuffix" -> dealDate.replace("-", "")
     )
 
     var result = queries

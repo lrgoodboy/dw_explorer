@@ -22,7 +22,7 @@ object TaskActor {
 
 }
 
-class TaskActor extends Actor {
+class TaskActor(eventStream: EventStream) extends Actor {
 
   import TaskActor._
 
@@ -40,6 +40,10 @@ class TaskActor extends Actor {
 
   def receive = {
     case taskId: Long => process(taskId)
+    case 'Fake => {
+      TimeUnit.SECONDS.sleep(1)
+      eventStream.publish("taskFinished", 123L)
+    }
     case _ => logger.debug("Unkown message.")
   }
 

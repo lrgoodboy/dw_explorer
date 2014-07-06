@@ -8,17 +8,22 @@ import java.sql.Timestamp
 import akka.actor.ActorRef
 import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
-import org.scalatra.{BadRequest, InternalServerError, NotFound}
+import org.scalatra.{BadRequest, InternalServerError, NotFound, AsyncResult, FutureSupport}
 import java.io.File
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import com.anjuke.dw.explorer.util.Config
+import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 
-class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
-    with JacksonJsonSupport with DatabaseSessionSupport with AuthenticationSupport {
+class QueryEditorServlet(taskActor: ActorRef, eventStream: EventStream) extends DwExplorerStack
+    with JacksonJsonSupport with DatabaseSessionSupport with AuthenticationSupport with FutureSupport {
 
   protected implicit val jsonFormats: Formats = DefaultFormats
+  protected implicit def executor: ExecutionContext = global
 
   before() {
     requireLogin()
@@ -195,6 +200,29 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     new File(TaskActor.errorFile(params("id").toLong)) match {
       case file if file.exists => file
       case _ => halt(NotFound())
+    }
+  }
+
+  get("/api/task/test/?") {
+    taskActor ! 'Fake
+    new AsyncResult {
+      val is = {
+        val queue = new LinkedBlockingQueue[Long]
+        val subscriber = eventStream.subscribe {
+          case ("taskFinished", id: Long) =>
+            queue.put(id)
+        }
+        val result = Future {
+          Option(queue.poll(3, TimeUnit.SECONDS)) match {
+            case Some(id) => id
+            case None => 0
+          }
+        }
+        result.onComplete {
+          case _ => eventStream.unsubscribe(subscriber)
+        }
+        result
+      }
     }
   }
 

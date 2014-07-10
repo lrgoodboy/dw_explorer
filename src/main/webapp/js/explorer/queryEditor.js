@@ -25,6 +25,7 @@ define('explorer/queryEditor', [
     'dijit/form/TextBox',
     'dijit/form/Button',
     'dijit/Toolbar',
+    'dojox/socket',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
@@ -35,7 +36,7 @@ define('explorer/queryEditor', [
     'cm/mode/sql/sql',
     'dojo/domReady!'
 ], function(declare, lang, config, array, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable, QueryResults,
-            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, Toolbar,
+            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, Toolbar, Socket,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror) {
 
     var QueryEditor = declare(null, {
@@ -46,6 +47,25 @@ define('explorer/queryEditor', [
             self.initDocument();
             self.initMetadata();
             self.initTemplate();
+
+            var socket = Socket('ws://127.0.0.1:8080/explorer/query-task/list');
+
+            socket.on('open', function(event) {
+                socket.send('Hi, I\'m Jerry.');
+
+                setTimeout(function() {
+                    socket.close();
+                }, 3000)
+            });
+
+            socket.on('message', function(event) {
+                console.log(event.data);
+            });
+
+            socket.on('close', function(event) {
+                console.log('closed');
+            });
+
         },
 
         initTaskStatus: function() {

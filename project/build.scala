@@ -42,7 +42,9 @@ object DwExplorerBuild extends Build {
         "org.webjars" % "dgrid" % "0.3.14",
         "org.apache.poi" % "poi-ooxml" % "3.10-FINAL",
         "commons-configuration" % "commons-configuration" % "1.10",
-        "org.webjars" % "codemirror" % "4.2"
+        "org.webjars" % "codemirror" % "4.2",
+        "org.scalatra" %% "scalatra-atmosphere" % ScalatraVersion,
+        "org.eclipse.jetty" % "jetty-websocket" % JettyVersion % "container"
       ),
       scalateTemplateConfig in Compile <<= (sourceDirectory in Compile){ base =>
         Seq(

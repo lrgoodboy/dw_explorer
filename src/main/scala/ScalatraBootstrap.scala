@@ -1,6 +1,7 @@
 import org.scalatra.LifeCycle
 import com.anjuke.dw.explorer.MyScalatraServlet
 import com.anjuke.dw.explorer.QueryEditorServlet
+import com.anjuke.dw.explorer.QueryTaskServlet
 import javax.servlet.ServletContext
 import com.anjuke.dw.explorer.init.DatabaseInit
 import akka.actor.ActorSystem
@@ -17,6 +18,7 @@ class ScalatraBootstrap extends LifeCycle with DatabaseInit {
     configureDb()
     context.mount(new MyScalatraServlet, "/*")
     context.mount(new QueryEditorServlet(taskActor), "/query-editor/*")
+    context.mount(new QueryTaskServlet, "/query-task/*")
   }
 
   override def destroy(context: ServletContext) {

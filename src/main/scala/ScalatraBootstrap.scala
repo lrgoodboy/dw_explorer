@@ -18,7 +18,7 @@ class ScalatraBootstrap extends LifeCycle with DatabaseInit {
     configureDb()
     context.mount(new MyScalatraServlet, "/*")
     context.mount(new QueryEditorServlet(taskActor), "/query-editor/*")
-    context.mount(new QueryTaskServlet, "/query-task/*")
+    context.mount(classOf[QueryTaskServlet], "/query-task/*")
   }
 
   override def destroy(context: ServletContext) {

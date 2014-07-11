@@ -1,27 +1,31 @@
 package com.anjuke.dw.explorer
 
-import org.scalatra.json.JacksonJsonSupport
 import org.scalatra.ScalatraServlet
-import org.scalatra.SessionSupport
-import org.scalatra.atmosphere._
-import scala.concurrent.ExecutionContext.Implicits.global
-import org.json4s._
+import org.eclipse.jetty.websocket.WebSocketServlet
+import javax.servlet.http.HttpServletRequest
+import org.eclipse.jetty.websocket.WebSocket
+import org.eclipse.jetty.websocket.WebSocket.Connection
 
-class QueryTaskServlet extends ScalatraServlet
-  with JacksonJsonSupport with SessionSupport
-  with AtmosphereSupport {
+class QueryTaskServlet extends WebSocketServlet {
 
-  protected implicit val jsonFormats: Formats = DefaultFormats
+  def doWebSocketConnect(request: HttpServletRequest, protocol: String): WebSocket = {
+    new QueryTaskWebSocket
+  }
 
-  atmosphere("/list/?") {
-    new AtmosphereClient {
-      def receive = {
-        case Connected => println(s"Connected $uuid")
-        case Disconnected(disconnector, _) => println(s"Disconnected $uuid")
-        case TextMessage(text) => send(s"ECHO: $text")
-        case Error(Some(error)) => println(error.toString)
-      }
+  class QueryTaskWebSocket extends WebSocket.OnTextMessage {
+
+    def onOpen(connection: Connection): Unit = {
+      println("Connected " + connection.toString)
     }
+
+    def onClose(closeCode: Int, message: String): Unit = {
+      println("Disconnected")
+    }
+
+    def onMessage(data: String): Unit = {
+      println("Receive " + data)
+    }
+
   }
 
 }

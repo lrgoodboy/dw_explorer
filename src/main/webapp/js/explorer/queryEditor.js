@@ -10,6 +10,7 @@ define('explorer/queryEditor', [
     'dojo/date/locale',
     'dojo/request',
     'dojo/json',
+    'dojo/cookie',
     'dojo/store/Memory',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
@@ -26,6 +27,7 @@ define('explorer/queryEditor', [
     'dijit/form/Button',
     'dijit/Toolbar',
     'dojox/socket',
+    'dojox/socket/Reconnect',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
@@ -35,8 +37,8 @@ define('explorer/queryEditor', [
     'cm/lib/codemirror',
     'cm/mode/sql/sql',
     'dojo/domReady!'
-], function(declare, lang, config, array, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable, QueryResults,
-            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, Toolbar, Socket,
+], function(declare, lang, config, array, query, html, domStyle, on, date, request, json, cookie, Memory, JsonRest, Observable, QueryResults,
+            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, Toolbar, Socket, Reconnect,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror) {
 
     var QueryEditor = declare(null, {
@@ -48,14 +50,15 @@ define('explorer/queryEditor', [
             self.initMetadata();
             self.initTemplate();
 
-            var socket = Socket('ws://127.0.0.1:8080/explorer/query-task/list');
+            var socket = Reconnect(Socket('ws://127.0.0.1:8080/explorer/query-task/list'));
 
             socket.on('open', function(event) {
-                socket.send('Hi, I\'m Jerry.');
-
-                setTimeout(function() {
-                    socket.close();
-                }, 3000)
+                console.log('open');
+                var data = {
+                    action: 'authenticate',
+                    token: cookie(config.cookieKey)
+                };
+                socket.send(json.stringify(data));
             });
 
             socket.on('message', function(event) {
@@ -63,7 +66,7 @@ define('explorer/queryEditor', [
             });
 
             socket.on('close', function(event) {
-                console.log('closed');
+                console.log('close');
             });
 
         },

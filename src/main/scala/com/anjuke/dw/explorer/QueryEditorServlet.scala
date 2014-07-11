@@ -14,6 +14,7 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import com.anjuke.dw.explorer.util.Config
+import com.anjuke.dw.explorer.init.RememberMeStrategy
 
 class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     with JacksonJsonSupport with DatabaseSessionSupport with AuthenticationSupport {
@@ -27,7 +28,9 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   get("/index") {
     requireRole(User.ROLE_BI)
     contentType = "text/html"
-    ssp("query-editor/index", "layout" -> "", "version" -> Config("common", "version"))
+    ssp("query-editor/index", "layout" -> "",
+        "version" -> Config("common", "version"),
+        "cookieKey" -> RememberMeStrategy.COOKIE_KEY)
   }
 
   post("/api/task/?") {

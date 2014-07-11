@@ -10,6 +10,7 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 import com.anjuke.dw.explorer.init.RememberMeStrategy
+import com.anjuke.dw.explorer.models.User
 
 class QueryTaskServlet extends WebSocketServlet {
 
@@ -21,11 +22,10 @@ class QueryTaskServlet extends WebSocketServlet {
 
 sealed class QueryTaskWebSocket extends WebSocket.OnTextMessage {
 
-  private val logger = LoggerFactory.getLogger(getClass)
-
   protected implicit val jsonFormats: Formats = DefaultFormats
-
-  private[this] var connection: Connection = null
+  private val logger = LoggerFactory.getLogger(getClass)
+  private var connection: Connection = null
+  private var user: User = null
 
   def onOpen(connection: Connection): Unit = {
     this.connection = connection
@@ -42,11 +42,19 @@ sealed class QueryTaskWebSocket extends WebSocket.OnTextMessage {
       case "authenticate" => {
         val token = (request \ "token").extract[String]
         RememberMeStrategy.validateToken(token) match {
-          case Some(user) => connection.sendMessage(s"Hello, ${user.truename}!")
-          case None => connection.sendMessage("Invalid token.")
+          case Some(user) => {
+            logger.info(s"User authenticated: ${user.id}, connection: ${connection.hashCode}")
+            sendMessage("ok", Map("msg" -> s"Hello, ${user.truename}!"))
+          }
+          case None => sendMessage("error", Map("msg" -> "Invalid token."))
         }
       }
     }
+  }
+
+  private def sendMessage(status: String, data: Map[String, JValue]): Unit = {
+    val message = compact(render(data + ("status" -> JString(status))))
+    connection.sendMessage(message)
   }
 
 }

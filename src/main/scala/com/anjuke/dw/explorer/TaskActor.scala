@@ -84,7 +84,6 @@ class TaskActor(actorSystem: ActorSystem) extends Actor {
       executeUpdate(task.id, prefix, sql)
     }
 
-    Task.updateStatus(task.id, Task.STATUS_OK)
   }
 
   def executeUpdate(taskId: Long, prefix: String, sql: String) {

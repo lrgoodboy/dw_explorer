@@ -1,7 +1,7 @@
 package com.anjuke.dw.explorer
 
 import akka.event.Logging
-import akka.actor.Actor
+import akka.actor.{Actor, ActorSystem}
 import dispatch._
 import dispatch.Defaults._
 import org.json4s._
@@ -11,6 +11,8 @@ import com.anjuke.dw.explorer.models.{Task, User}
 import java.io.FileWriter
 import java.util.concurrent.TimeUnit
 import java.sql.Timestamp
+
+case class TaskEvent(val task: Task)
 
 object TaskActor {
 
@@ -22,7 +24,7 @@ object TaskActor {
 
 }
 
-class TaskActor extends Actor {
+class TaskActor(actorSystem: ActorSystem) extends Actor {
 
   import TaskActor._
 

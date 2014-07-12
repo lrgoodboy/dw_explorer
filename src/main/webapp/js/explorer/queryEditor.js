@@ -27,7 +27,6 @@ define('explorer/queryEditor', [
     'dijit/form/Button',
     'dijit/Toolbar',
     'dojox/socket',
-    'dojox/socket/Reconnect',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
@@ -38,7 +37,7 @@ define('explorer/queryEditor', [
     'cm/mode/sql/sql',
     'dojo/domReady!'
 ], function(declare, lang, config, array, query, html, domStyle, on, date, request, json, cookie, Memory, JsonRest, Observable, QueryResults,
-            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, Toolbar, Socket, Reconnect,
+            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, Toolbar, Socket,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror) {
 
     var QueryEditor = declare(null, {
@@ -50,23 +49,30 @@ define('explorer/queryEditor', [
             self.initMetadata();
             self.initTemplate();
 
-            var socket = Reconnect(Socket('ws://127.0.0.1:8080/explorer/query-task/list'));
+            var socket = Socket('ws://' + config.websocketServer + '/explorer/query-task/list');
 
             socket.on('open', function(event) {
-                console.log('open');
-                var data = {
-                    action: 'authenticate',
+                console.log('Subscribing...');
+                socket.send(json.stringify({
+                    action: 'subscribe',
                     token: cookie(config.cookieKey)
-                };
-                socket.send(json.stringify(data));
+                }));
             });
 
             socket.on('message', function(event) {
-                console.log(event.data);
+                var message = json.parse(event.data);
+                switch (message.action) {
+                case 'taskList':
+                    console.log(message.taskList);
+                    break;
+
+                default:
+                    console.log(message)
+                }
             });
 
             socket.on('close', function(event) {
-                console.log('close');
+                console.log('Reconnecting...');
             });
 
         },
@@ -144,7 +150,7 @@ define('explorer/queryEditor', [
 
             var updated = null;
 
-            setInterval(function() {
+            /*setInterval(function() {
 
                 if (updated == null) {
                     query('.dgrid-row', self.grid.domNode).forEach(function(node) {
@@ -171,7 +177,7 @@ define('explorer/queryEditor', [
                     self.showResult(task);
                 });
 
-            }, 3000);
+            }, 3000);*/
 
         },
 

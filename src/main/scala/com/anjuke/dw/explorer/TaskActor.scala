@@ -11,12 +11,17 @@ import com.anjuke.dw.explorer.models.{Task, User}
 import java.io.FileWriter
 import java.util.concurrent.TimeUnit
 import java.sql.Timestamp
+import com.anjuke.dw.explorer.util.Config
+import akka.util.Timeout
+import akka.pattern.ask
+import scala.concurrent.duration._
+import scala.concurrent.{Await, TimeoutException}
 
 case class TaskEvent(val task: Task)
 
 object TaskActor {
 
-  val HIVE_SERVER_URL = "http://10.20.8.70:8080/hive-server/api"
+  val HIVE_SERVER_URL = Config("service", "dw.hiveserver.url")
   val TASK_FOLDER = "/data2/dw_explorer/query/task"
 
   def outputFile(taskId: Long) = s"$TASK_FOLDER/query_task_$taskId.out"
@@ -31,6 +36,8 @@ class TaskActor(actorSystem: ActorSystem) extends Actor {
   implicit val formats = DefaultFormats
 
   val logger = Logging(context.system, this)
+  val hiveserver = actorSystem.actorFor(Config("service", "dw.hiveserver.akka.url"))
+  implicit val timeout = Timeout(2 hours)
 
   override def preStart = {
     logger.info("taskActor started")
@@ -93,73 +100,68 @@ class TaskActor(actorSystem: ActorSystem) extends Actor {
 
   }
 
-  def executeUpdate(taskId: Long, prefix: String, sql: String) {
+  def executeUpdate(taskId: Long, prefix: String, sql: String): Unit = {
 
-    // send request
-    val submitReq = (dispatch.url(HIVE_SERVER_URL) / "task" / "submit").POST
-        .setContentType("application/json", "UTF-8")
-        .setBody(compact(render(Map("query" -> sql, "prefix" -> prefix))))
+    // enqueue
+    val enqueueFuture = hiveserver ? compact(render(("action" -> "enqueue") ~ ("query" -> sql) ~ ("prefix" -> prefix)))
 
-    val remoteTaskIdFuture = Http(submitReq OK as.String).map(resultJson => {
+    val remoteTaskIdFuture = enqueueFuture.mapTo[String] map { resultJson =>
       val result = parse(resultJson)
       result \ "status" match {
         case JString("ok") => (result \ "id").extract[Long]
         case _ => throw new Exception("Fail to submit task - " + (result \ "msg").extractOrElse[String]("unknown reason"))
       }
-    })
+    }
 
     val remoteTaskId = remoteTaskIdFuture()
     logger.info(s"Remote task submmitted, id: $remoteTaskId")
 
-    // wait for completion
-    while (!Thread.interrupted) {
+    // execute
+    val executeFuture = hiveserver ? compact(render(("action" -> "execute") ~ ("id" -> remoteTaskId)))
+    val finishFuture = executeFuture.mapTo[String] map { resultJson =>
+      val result = parse(resultJson)
+      result \ "status" match {
+        case JString("ok") => {
+          result \ "taskStatus" match {
+            case JString("ok") => {
 
-      // check task status
-      if (Task.isInterrupted(taskId)) {
-        val cancelReq = dispatch.url(HIVE_SERVER_URL) / "task" / "cancel" / remoteTaskId
-        val cancelRes = Http(cancelReq OK as.String)
-        cancelRes()
-        throw new Exception("Task is interrupted.")
-      }
+              // read standard output
+              val outputWriter = new FileWriter(outputFile(taskId), true)
 
-      // check remote task status
-      val statusReq = dispatch.url(HIVE_SERVER_URL) / "task" / "status" / remoteTaskId
+              val outputReq = dispatch.url(HIVE_SERVER_URL) / "task" / "output" / remoteTaskId
+              val outputFuture = Http(outputReq > as.stream.Lines(line => {
+                outputWriter.write(line)
+                outputWriter.write("\n")
+              }))
+              outputFuture()
 
-      val remoteStatusFuture = Http(statusReq OK as.String).map(resultJson => {
-        val result = parse(resultJson)
-        result \ "status" match {
-          case JString("ok") =>
-            result \ "taskStatus" match {
-              case JString("ok") =>
-
-                // read standard output
-                val outputWriter = new FileWriter(outputFile(taskId), true)
-
-                val outputReq = dispatch.url(HIVE_SERVER_URL) / "task" / "output" / remoteTaskId
-                val outputFuture = Http(outputReq > as.stream.Lines(line => {
-                  outputWriter.write(line)
-                  outputWriter.write("\n")
-                }))
-                outputFuture()
-
-                outputWriter.close
-
-                'break
-
-              case JString("error") => throw new Exception((result \ "taskErrorMessage").extract[String])
-              case _ => 'continue
+              outputWriter.close
             }
 
-          case _ => throw new Exception("Fail to fetch task status - " + (result \ "msg").extractOrElse[String]("unknown reason"))
+            case JString("error") => throw new Exception((result \ "taskErrorMessage").extract[String])
+            case _ => throw new Exception("Unknown task status.")
+          }
         }
-      })
 
-      remoteStatusFuture() match {
-        case 'break => return
-        case _ => TimeUnit.SECONDS.sleep(3)
+        case _ => throw new Exception("Fail to execute task - " + (result \ "msg").extractOrElse[String]("unknown reason"))
       }
-
     }
+
+    // wait
+    while (!Task.isInterrupted(taskId)) {
+      try {
+        Await.result(finishFuture, 1 second)
+        return
+      } catch {
+        case _: TimeoutException =>
+      }
+    }
+
+    // interrupted
+    val cancelReq = dispatch.url(HIVE_SERVER_URL) / "task" / "cancel" / remoteTaskId
+    val cancelRes = Http(cancelReq OK as.String)
+    cancelRes()
+    throw new Exception("Task is interrupted.")
   }
 
   private def log2file(file: String, log: String) {

@@ -8,7 +8,7 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import com.anjuke.dw.explorer.TaskActor
 import akka.routing.SmallestMailboxRouter
-
+import com.anjuke.dw.explorer.util.Config
 
 class ScalatraBootstrap extends LifeCycle with DatabaseInit {
 

@@ -4,7 +4,7 @@ import org.apache.commons.configuration._
 
 object Config {
 
-  private val configMap = Seq("common", "database", "auth").map(section => {
+  private val configMap = Seq("common", "database", "auth", "service").map(section => {
     val config = new CompositeConfiguration
     try {
       config.addConfiguration(new PropertiesConfiguration(s"override/${section}.properties"))

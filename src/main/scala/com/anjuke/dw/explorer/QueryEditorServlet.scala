@@ -14,9 +14,49 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import com.anjuke.dw.explorer.util.Config
+import com.anjuke.dw.explorer.init.RememberMeStrategy
+
+object QueryEditorServlet {
+
+  val statusMap = Map(
+    Task.STATUS_NEW -> "等待中",
+    Task.STATUS_RUNNING -> "运行中",
+    Task.STATUS_OK -> "运行成功",
+    Task.STATUS_ERROR -> "运行失败",
+    Task.STATUS_INTERRUPTED -> "取消中"
+  )
+
+  def formatTask(task: Task): Map[String, JValue] = {
+
+    val dfDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+
+    Map(
+      "id" -> task.id,
+      "created" -> dfDateTime.format(task.created),
+      "queries" -> task.queries,
+      "queriesBrief" -> {
+        if (task.queries.length > 100) task.queries.substring(0, 100) else task.queries
+      },
+      "status" -> statusMap(task.status),
+      "duration" -> {
+        if (task.duration > 0) formatDuration(task.duration) else "-"
+      },
+      "updated" -> dfDateTime.format(task.updated)
+    )
+  }
+
+  private def formatDuration(duration: Int) = {
+    val hour = duration / 60 / 60
+    val minute = duration / 60 % 60
+    val second = duration % 60
+    f"$hour%02d:$minute%02d:$second%02d"
+  }
+}
 
 class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     with JacksonJsonSupport with DatabaseSessionSupport with AuthenticationSupport {
+
+  import QueryEditorServlet._
 
   protected implicit val jsonFormats: Formats = DefaultFormats
 
@@ -27,7 +67,10 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   get("/index") {
     requireRole(User.ROLE_BI)
     contentType = "text/html"
-    ssp("query-editor/index", "layout" -> "", "version" -> Config("common", "version"))
+    ssp("query-editor/index", "layout" -> "",
+        "version" -> Config("common", "version"),
+        "cookieKey" -> RememberMeStrategy.COOKIE_KEY,
+        "websocketServer" -> s"${request.getLocalAddr}:${request.getLocalPort}")
   }
 
   post("/api/task/?") {
@@ -55,14 +98,6 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     }
 
   }
-
-  val statusMap = Map(
-    Task.STATUS_NEW -> "等待中",
-    Task.STATUS_RUNNING -> "运行中",
-    Task.STATUS_OK -> "运行成功",
-    Task.STATUS_ERROR -> "运行失败",
-    Task.STATUS_INTERRUPTED -> "取消中"
-  )
 
   get("/api/task/?") {
     contentType = formats("json")
@@ -400,32 +435,6 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   }
 
   private def currentTimestamp = new Timestamp(System.currentTimeMillis)
-
-  private def formatDuration(duration: Int) = {
-    val hour = duration / 60 / 60
-    val minute = duration / 60 % 60
-    val second = duration % 60
-    f"$hour%02d:$minute%02d:$second%02d"
-  }
-
-  private def formatTask(task: Task) = {
-
-    val dfDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-
-    Map(
-      "id" -> task.id,
-      "created" -> dfDateTime.format(task.created),
-      "queries" -> task.queries,
-      "queriesBrief" -> {
-        if (task.queries.length > 100) task.queries.substring(0, 100) else task.queries
-      },
-      "status" -> statusMap(task.status),
-      "duration" -> {
-        if (task.duration > 0) formatDuration(task.duration) else "-"
-      },
-      "updated" -> dfDateTime.format(task.updated)
-    )
-  }
 
   private def calcColumnsWidth(columns: List[Map[String, Any]], rows: List[Map[String, String]]) = {
 

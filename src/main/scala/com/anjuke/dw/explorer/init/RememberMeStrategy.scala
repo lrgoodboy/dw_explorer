@@ -12,9 +12,26 @@ import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Mac
 
 object RememberMeStrategy {
+
   val COOKIE_KEY = "dw_explorer_auth"
   val COOKIE_EXPIRE = 7 * 24 * 3600
-  val PTRN_TOKEN = "^([0-9]+)_(.*)$".r
+  val PTRN_TOKEN = "([0-9]+)_(.*)".r
+
+  def validateToken(token: String): Option[User] = token match {
+    case PTRN_TOKEN(userId, signature) =>
+      if (signature == hmac(userId)) User.lookup(userId.toLong) else None
+    case _ => None
+  }
+
+  private val HMAC_KEY = "dwrocks"
+  private val HMAC_ALGORITHM = "HmacMD5"
+
+  private def hmac(input: String): String = {
+    val mac = Mac.getInstance(HMAC_ALGORITHM)
+    mac.init(new SecretKeySpec(HMAC_KEY.getBytes, HMAC_ALGORITHM))
+    mac.doFinal(input.getBytes).map("%02x".format(_)).mkString
+  }
+
 }
 
 class RememberMeStrategy(protected val app: ScalatraBase, protected val scentryConfig: ScentryConfig)
@@ -31,14 +48,8 @@ class RememberMeStrategy(protected val app: ScalatraBase, protected val scentryC
 
   def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse) = {
     logger.info("attempting authentication")
-
     app.cookies.get(COOKIE_KEY) match {
-      case Some(token) =>
-        PTRN_TOKEN findFirstIn token match {
-          case Some(PTRN_TOKEN(userId, signature)) =>
-            if (signature == hmac(userId)) User.lookup(userId.toLong) else None
-          case _ => None
-        }
+      case Some(token) => validateToken(token)
       case None => None
     }
   }
@@ -54,15 +65,6 @@ class RememberMeStrategy(protected val app: ScalatraBase, protected val scentryC
   override def beforeLogout(user: User)(implicit request: HttpServletRequest, response: HttpServletResponse) {
     logger.info("beforeLogout")
     app.cookies.delete(COOKIE_KEY)(CookieOptions(path = cookiePath))
-  }
-
-  val HMAC_KEY = "dwrocks"
-  val HMAC_ALGORITHM = "HmacMD5"
-
-  def hmac(input: String): String = {
-    val mac = Mac.getInstance(HMAC_ALGORITHM)
-    mac.init(new SecretKeySpec(HMAC_KEY.getBytes, HMAC_ALGORITHM))
-    mac.doFinal(input.getBytes).map("%02x".format(_)).mkString
   }
 
 }

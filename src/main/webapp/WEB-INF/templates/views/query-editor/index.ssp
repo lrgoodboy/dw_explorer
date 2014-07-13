@@ -1,4 +1,6 @@
 <%@ var version: String %>
+<%@ var cookieKey: String %>
+<%@ var websocketServer: String %>
 
 <!DOCTYPE html>
 <html>
@@ -56,7 +58,9 @@ var dojoConfig = {
         {name: 'explorer', location: '${uri("/js/explorer")}'}
     ],
     cacheBust: '${version}',
-    contextPath: '${contextPath}'
+    contextPath: '${contextPath}',
+    cookieKey: '${cookieKey}',
+    websocketServer: '${websocketServer}'
 };
 </script>
 <script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: true, parseOnLoad: true"></script>

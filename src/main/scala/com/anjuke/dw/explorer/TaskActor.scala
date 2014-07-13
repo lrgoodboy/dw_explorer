@@ -1,7 +1,7 @@
 package com.anjuke.dw.explorer
 
 import akka.event.Logging
-import akka.actor.Actor
+import akka.actor.{Actor, ActorSystem}
 import dispatch._
 import dispatch.Defaults._
 import org.json4s._
@@ -11,6 +11,8 @@ import com.anjuke.dw.explorer.models.{Task, User}
 import java.io.FileWriter
 import java.util.concurrent.TimeUnit
 import java.sql.Timestamp
+
+case class TaskEvent(val task: Task)
 
 object TaskActor {
 
@@ -22,7 +24,7 @@ object TaskActor {
 
 }
 
-class TaskActor extends Actor {
+class TaskActor(actorSystem: ActorSystem) extends Actor {
 
   import TaskActor._
 
@@ -54,6 +56,7 @@ class TaskActor extends Actor {
 
     logger.info("Processing task id: " + taskId)
     Task.updateStatus(task.id, Task.STATUS_RUNNING)
+    publishTask(task.id)
 
     try {
       execute(task)
@@ -66,6 +69,12 @@ class TaskActor extends Actor {
         log2file(errorFile(task.id), e.getMessage)
     }
 
+    publishTask(task.id)
+  }
+
+  private def publishTask(id: Long): Unit = {
+    val task = Task.lookup(id).get
+    actorSystem.eventStream.publish(TaskEvent(task))
   }
 
   private def calcDuration(created: Timestamp) = {
@@ -82,7 +91,6 @@ class TaskActor extends Actor {
       executeUpdate(task.id, prefix, sql)
     }
 
-    Task.updateStatus(task.id, Task.STATUS_OK)
   }
 
   def executeUpdate(taskId: Long, prefix: String, sql: String) {

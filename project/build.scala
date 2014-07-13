@@ -43,7 +43,8 @@ object DwExplorerBuild extends Build {
         "org.apache.poi" % "poi-ooxml" % "3.10-FINAL",
         "commons-configuration" % "commons-configuration" % "1.10",
         "org.webjars" % "codemirror" % "4.2",
-        "org.eclipse.jetty" % "jetty-websocket" % JettyVersion
+        "org.eclipse.jetty" % "jetty-websocket" % JettyVersion,
+        "com.typesafe.akka" %% "akka-remote" % "2.1.2"
       ),
       scalateTemplateConfig in Compile <<= (sourceDirectory in Compile){ base =>
         Seq(

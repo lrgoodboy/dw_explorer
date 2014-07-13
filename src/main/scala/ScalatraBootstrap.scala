@@ -23,18 +23,6 @@ class ScalatraBootstrap extends LifeCycle with DatabaseInit {
     // It may be not the best way to inject the dependency.
     context.setAttribute("actorSystem", actorSystem)
     context.mount(classOf[QueryTaskServlet], "/query-task/*")
-
-    import akka.pattern.ask
-    import akka.util.Timeout
-    import scala.concurrent.duration._
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    val a = actorSystem.actorFor(Config("service", "dw.hiveserver.url"))
-    implicit val timeout = Timeout(5 seconds)
-    val f = a ? 'Ping
-    for (result <- f) {
-      println(result)
-    }
   }
 
   override def destroy(context: ServletContext) {

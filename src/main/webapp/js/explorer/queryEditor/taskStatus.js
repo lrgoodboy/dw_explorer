@@ -6,6 +6,7 @@ define('explorer/queryEditor/taskStatus', [
     'dojo/request',
     'dojo/json',
     'dojo/cookie',
+    'dojo/store/Memory',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
     'dijit/registry',
@@ -19,7 +20,7 @@ define('explorer/queryEditor/taskStatus', [
     'dgrid/extensions/ColumnResizer',
     'put-selector/put',
     'dojo/domReady!'
-], function(declare, lang, config, array, request, json, cookie, JsonRest, Observable,
+], function(declare, lang, config, array, request, json, cookie, Memory, JsonRest, Observable,
             registry, ContentPane, Menu, MenuItem, Socket,
             Grid, OnDemandGrid, Selection, ColumnResizer,
             put) {
@@ -103,36 +104,6 @@ define('explorer/queryEditor/taskStatus', [
                 label: '删除任务'
             }));*/
 
-            var updated = null;
-
-            /*setInterval(function() {
-
-                if (updated == null) {
-                    query('.dgrid-row', self.grid.domNode).forEach(function(node) {
-                        var task = self.grid.row(node).data;
-                        if (updated == null || task.updated > updated) {
-                            updated = task.updated;
-                        }
-                    });
-                }
-
-                var data = {};
-                if (updated != null) {
-                    data['updated'] = updated;
-                }
-
-                self.taskStore.query(data).forEach(function(task) {
-
-                    self.taskStore.notify(task, task.id);
-
-                    if (updated == null || task.updated > updated) {
-                        updated = task.updated;
-                    }
-
-                    self.showResult(task);
-                });
-
-            }, 3000);*/
         },
 
         showResult: function(task) {
@@ -208,7 +179,7 @@ define('explorer/queryEditor/taskStatus', [
                         put(pane.domNode, 'div.task-result-header', '返回结果为空');
                     } else {
                         var div = put(pane.domNode, 'div.task-result-header', '结果列表（前100条）');
-                        put(div, 'a[href="' + config.contextPath + '/query-editor/api/task/excel/' + task.id + '"]', '下载Excel');
+                        put(div, 'a[href="' + config.contextPath + '/query-editor/api/task/excel/' + task.id + '"][target="_blank"]', '下载Excel');
                     }
 
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
@@ -238,6 +209,8 @@ define('explorer/queryEditor/taskStatus', [
         },
 
         initWebSocket: function() {
+            var self = this;
+
             var socket = Socket('ws://' + config.websocketServer + '/explorer/query-task/list');
 
             socket.on('open', function(event) {
@@ -250,18 +223,23 @@ define('explorer/queryEditor/taskStatus', [
 
             socket.on('message', function(event) {
                 var message = json.parse(event.data);
-                switch (message.action) {
-                case 'taskList':
-                    console.log(message.taskList);
-                    break;
-
-                default:
-                    console.log(message)
+                if ('task' in message) {
+                    self.taskStore.notify(message.task, message.task.id);
+                    self.showResult(message.task)
+                } else if ('status' in message) {
+                    if (message.status == 'error') {
+                        console.log('Something went wrong: ' + message.msg);
+                    }
+                } else {
+                    console.log('Unknown message: ' + json.stringify(message));
                 }
             });
 
             socket.on('close', function(event) {
-                console.log('Connection is closed, retry in 3 seconds.');
+                console.log('Connection is closed, reconnect in 3 seconds.');
+                setTimeout(function() {
+                    self.initWebSocket();
+                }, 3000);
             });
         },
 

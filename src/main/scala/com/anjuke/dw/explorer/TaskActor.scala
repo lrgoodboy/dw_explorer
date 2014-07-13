@@ -56,6 +56,7 @@ class TaskActor(actorSystem: ActorSystem) extends Actor {
 
     logger.info("Processing task id: " + taskId)
     Task.updateStatus(task.id, Task.STATUS_RUNNING)
+    publishTask(task.id)
 
     try {
       execute(task)
@@ -68,6 +69,12 @@ class TaskActor(actorSystem: ActorSystem) extends Actor {
         log2file(errorFile(task.id), e.getMessage)
     }
 
+    publishTask(task.id)
+  }
+
+  private def publishTask(id: Long): Unit = {
+    val task = Task.lookup(id).get
+    actorSystem.eventStream.publish(TaskEvent(task))
   }
 
   private def calcDuration(created: Timestamp) = {

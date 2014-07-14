@@ -70,7 +70,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     ssp("query-editor/index", "layout" -> "",
         "version" -> Config("common", "version"),
         "cookieKey" -> RememberMeStrategy.COOKIE_KEY,
-        "websocketServer" -> s"${request.getLocalAddr}:${request.getLocalPort}")
+        "websocketServer" -> Config("service", "websocket.server"))
   }
 
   post("/api/task/?") {

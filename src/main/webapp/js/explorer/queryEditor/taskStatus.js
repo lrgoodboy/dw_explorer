@@ -183,10 +183,11 @@ define('explorer/queryEditor/taskStatus', [
                     }
 
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
-                        store: new Memory({data: result.rows}),
                         columns: result.columns,
                         className: 'dgrid-autoheight'
                     });
+
+                    gridOutput.renderArray(result.rows);
 
                     pane.addChild(gridOutput);
                 });

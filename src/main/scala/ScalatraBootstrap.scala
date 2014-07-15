@@ -9,10 +9,20 @@ import akka.actor.Props
 import com.anjuke.dw.explorer.TaskActor
 import akka.routing.SmallestMailboxRouter
 import com.anjuke.dw.explorer.util.Config
+import com.typesafe.config.ConfigFactory
 
 class ScalatraBootstrap extends LifeCycle with DatabaseInit {
 
-  val actorSystem = ActorSystem("queryEditor")
+  val actorSystem = {
+
+    val config = ConfigFactory.parseString(Seq(
+      "akka.remote.netty.hostname = \"%s\"" format Config("service", "akka.remote.netty.hostname"),
+      "akka.remote.netty.port = %s" format Config("service", "akka.remote.netty.port")
+    ) mkString "\n").withFallback(ConfigFactory.load)
+
+    ActorSystem("queryEditor", config)
+  }
+
   val taskActor = actorSystem.actorOf(Props(new TaskActor(actorSystem)).withRouter(SmallestMailboxRouter(10)), "taskActor")
 
   override def init(context: ServletContext) {

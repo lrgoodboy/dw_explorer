@@ -3,6 +3,7 @@ define('explorer/queryEditor', [
     'dojo/_base/lang',
     'dojo/_base/config',
     'dojo/_base/array',
+    'dojo/ready',
     'dojo/query',
     'dojo/html',
     'dojo/dom-style',
@@ -23,7 +24,9 @@ define('explorer/queryEditor', [
     'dijit/form/Select',
     'dijit/form/TextBox',
     'dijit/form/Button',
+    'dijit/form/CheckBox',
     'dijit/Toolbar',
+    'dijit/Fieldset',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
@@ -32,19 +35,20 @@ define('explorer/queryEditor', [
     'put-selector/put',
     'cm/lib/codemirror',
     'cm/mode/sql/sql',
-    'explorer/queryEditor/taskStatus',
-    'dojo/domReady!'
-], function(declare, lang, config, array, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable,
-            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, Toolbar,
+    'explorer/queryEditor/taskStatus'
+], function(declare, lang, config, array, ready, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable,
+            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, CheckBox, Toolbar, Fieldset,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror, cmdModeSql, taskStatus) {
 
     var QueryEditor = declare(null, {
 
         constructor: function() {
             var self = this;
-            self.initDocument();
-            self.initMetadata();
-            self.initTemplate();
+            ready(function() {
+                self.initDocument();
+                self.initMetadata();
+                self.initOption();
+            });
         },
 
         initDocument: function() {
@@ -433,6 +437,38 @@ define('explorer/queryEditor', [
                 rowGrid.renderArray(result.rows);
                 pane.addChild(rowGrid);
             });
+        },
+
+        initOption: function() {
+            var self = this;
+
+            var pane = registry.byId('divOption');
+
+            // udf
+            var udfList = [
+                {name: 'SUBSTRING_INDEX', jar: 'SubStringIndexUDF.jar', clazz: 'com.anjuke.dw.hive.udf.SubStringIndex'},
+                {name: 'RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
+                {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'}
+            ];
+
+            var ul = '<ul class="option-list">';
+            array.forEach(udfList, function(udf, i) {
+                ul += '<li><label><input type="checkbox" data-dojo-type="dijit/form/CheckBox"> ' + udf.name + '</label></li>';
+            });
+            ul += '</ul>';
+
+            var fsUdf = new Fieldset({
+                title: 'UDF',
+                toggleable: false,
+                content: ul
+            });
+            pane.addChild(fsUdf);
+
+            var fsSet = new Fieldset({
+                title: '配置项',
+                toggleable: false
+            });
+            pane.addChild(fsSet);
         },
 
         initTemplate: function() {

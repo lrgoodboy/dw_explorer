@@ -3,6 +3,7 @@ define('explorer/queryEditor/taskStatus', [
     'dojo/_base/lang',
     'dojo/_base/config',
     'dojo/_base/array',
+    'dojo/ready',
     'dojo/request',
     'dojo/json',
     'dojo/cookie',
@@ -18,9 +19,8 @@ define('explorer/queryEditor/taskStatus', [
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
-    'put-selector/put',
-    'dojo/domReady!'
-], function(declare, lang, config, array, request, json, cookie, Memory, JsonRest, Observable,
+    'put-selector/put'
+], function(declare, lang, config, array, ready, request, json, cookie, Memory, JsonRest, Observable,
             registry, ContentPane, Menu, MenuItem, Socket,
             Grid, OnDemandGrid, Selection, ColumnResizer,
             put) {
@@ -29,8 +29,10 @@ define('explorer/queryEditor/taskStatus', [
 
         constructor: function() {
             var self = this;
-            self.initGrid();
-            self.initWebSocket();
+            ready(function() {
+                self.initGrid();
+                self.initWebSocket();
+            });
         },
 
         initGrid: function() {

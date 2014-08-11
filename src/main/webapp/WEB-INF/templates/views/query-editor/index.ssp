@@ -33,8 +33,7 @@
         <ul id="ulTables"></ul>
       </div>
     </div>
-    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '查询模板'">
-      <div id="treeTemplate"></div>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '选项'" id="divOption">
     </div>
   </div>
 

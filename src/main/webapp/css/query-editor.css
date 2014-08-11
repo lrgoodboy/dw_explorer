@@ -93,3 +93,14 @@ html, body {
     overflow-y: scroll;
     overflow-x: scroll;
 }
+
+ul.option-list {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+}
+
+ul.option-list li {
+    margin: 0;
+    padding: 0;
+}

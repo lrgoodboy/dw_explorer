@@ -7,6 +7,7 @@ define('explorer/queryEditor', [
     'dojo/query',
     'dojo/html',
     'dojo/dom-style',
+    'dojo/dom-attr',
     'dojo/on',
     'dojo/date/locale',
     'dojo/request',
@@ -37,7 +38,7 @@ define('explorer/queryEditor', [
     'cm/lib/codemirror',
     'cm/mode/sql/sql',
     'explorer/queryEditor/taskStatus'
-], function(declare, lang, config, array, ready, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable,
+], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, on, date, request, json, Memory, JsonRest, Observable,
             registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button,
             CheckBox, NumberSpinner, Toolbar, Fieldset,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror, cmdModeSql, taskStatus) {
@@ -167,11 +168,11 @@ define('explorer/queryEditor', [
                             });
 
                             btnRunSelected.on('click', function() {
-                                taskStatus.submitTask(editor.getSelection());
+                                taskStatus.submitTask(self.getOptions() + editor.getSelection());
                             });
 
                             btnRunAll.on('click', function() {
-                                taskStatus.submitTask(editor.getValue());
+                                taskStatus.submitTask(self.getOptions() + editor.getValue());
                             });
 
                         });
@@ -488,6 +489,37 @@ define('explorer/queryEditor', [
                 style: 'margin-top: 10px;'
             });
             pane.addChild(fsSet);
+        },
+
+        getOptions: function() {
+            var self = this;
+
+            var result = '';
+
+            // udf
+            array.forEach(query('[name="optionUdf"]:checked'), function(cbUdf) {
+                var udf = array.filter(self.udfList, function(item) {
+                    return item.name == domAttr.get(cbUdf, 'value');
+                })[0];
+                result += 'ADD JAR /home/hadoop/dwetl/hiveudf/' + udf.jar + ';\n'
+                        + 'CREATE TEMPORARY FUNCTION ' + udf.name + ' AS \'' + udf.clazz + '\';\n';
+            });
+
+            // set
+            if (query('[name="optionReducerCount"]:checked').length > 0) {
+                var nsReducerCount = query('[name="optionReducerCountValue"]')[0];
+                result += 'SET mapred.reducer.tasks = ' + domAttr.get(nsReducerCount, 'value') + ';\n';
+            }
+
+            if (query('[name="optionMapsideJoin"]:checked').length > 0) {
+                result += 'SET hive.auto.convert.join = true;\n';
+            }
+
+            if (query('[name="optionShark"]:checked').length > 0) {
+                result += 'SET dw.engine = shark;\n';
+            }
+
+            return result;
         },
 
         initTemplate: function() {

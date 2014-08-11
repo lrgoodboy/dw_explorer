@@ -447,6 +447,16 @@ define('explorer/queryEditor', [
             {name: 'RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
             {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'}
         ],
+        
+        formatUdf: function(name) {
+            var self = this;
+            var udf = array.filter(self.udfList, function(item) {
+                return item.name == name;
+            })[0];
+            return 'ADD JAR /home/hadoop/dwetl/hiveudf/' + udf.jar + ';\n'
+                 + 'CREATE TEMPORARY FUNCTION ' + udf.name + ' AS \'' + udf.clazz + '\';\n';
+        },
+        
         initOption: function() {
             var self = this;
 
@@ -455,7 +465,7 @@ define('explorer/queryEditor', [
             // udf
             var ulUdf = '<ul class="option-list">';
             array.forEach(self.udfList, function(udf, i) {
-                ulUdf += '<li><a href="javascript:void(0);">添加</a>'
+                ulUdf += '<li><a href="javascript:void(0);" option_udf="' + udf.name + '">添加</a>'
                        + '<label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionUdf" value="' + udf.name + '"> ' + udf.name + '</label>'
                        + '</li>';
             });
@@ -466,19 +476,25 @@ define('explorer/queryEditor', [
                 content: ulUdf
             });
             pane.addChild(fsUdf);
+            
+            array.forEach(query('a[option_udf]'), function(a) {
+                on(a, 'click', function() {
+                    self.insertOption(self.formatUdf(domAttr.get(a, 'option_udf')));
+                });
+            });
 
             // set
             var ulSet = '<ul class="option-list">'
-                      + '<li><a href="javascript:void(0);">添加</a>'
+                      + '<li><a href="javascript:void(0);" option_reducer_count="1">添加</a>'
                       + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionReducerCount"> Reducer数量</label>'
                       + '  <input type="text" name="optionReducerCountValue" value="20" data-dojo-type="dijit/form/NumberSpinner" style="width: 60px;">'
                       + '</li>'
 
-                      + '<li><a href="javascript:void(0);">添加</a>'
+                      + '<li><a href="javascript:void(0);" option_mapside_join="1">添加</a>'
                       + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionMapsideJoin"> Map-side JOIN</label>'
                       + '</li>'
 
-                      + '<li><a href="javascript:void(0);">添加</a>'
+                      + '<li><a href="javascript:void(0);" option_shark="1">添加</a>'
                       + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionShark"> Shark</label>'
                       + '</li>'
                       + '</ul>';
@@ -498,11 +514,7 @@ define('explorer/queryEditor', [
 
             // udf
             array.forEach(query('[name="optionUdf"]:checked'), function(cbUdf) {
-                var udf = array.filter(self.udfList, function(item) {
-                    return item.name == domAttr.get(cbUdf, 'value');
-                })[0];
-                result += 'ADD JAR /home/hadoop/dwetl/hiveudf/' + udf.jar + ';\n'
-                        + 'CREATE TEMPORARY FUNCTION ' + udf.name + ' AS \'' + udf.clazz + '\';\n';
+                result += self.formatUdf(domAttr.get(cbUdf, 'value'));
             });
 
             // set
@@ -522,60 +534,19 @@ define('explorer/queryEditor', [
             return result;
         },
 
-        initTemplate: function() {
+        insertOption: function(content) {
             var self = this;
 
-            var store = Memory({
-                data: [
-                    {id: 'root'},
+            var central = registry.byId('central');
+            var pane = central.selectedChildWidget;
 
-                    {id: 'stmt', name: '常用语句', isFolder: true, parent: 'root'},
-                    {id: 'stmt-create', name: 'CREATE TABLE', isFolder: false, parent: 'stmt', content: 'CREATE TABLE db.table (\n  col1 type,\n  col2 type\n)\nPARTITIONED BY (col3 STRING)\nROW FORMAT DELIMITED FIELDS TERMINATED BY \'\\t\';\n'},
-                    {id: 'stmt-insert', name: 'INSERT OVERWRITE', isFolder: false, parent: 'stmt', content: 'INSERT OVERWRITE TABLE db.table PARTITION (col3 = ${dealDate})\nAS SELECT\n  col1,\n  col2\nFROM db.table;\n'},
+            if (typeof pane == 'undefined') {
+                alert('请先打开一个文档。');
+                return;
+            }
 
-                    {id: 'udf', name: 'UDF', isFolder: true, parent: 'root'},
-                    {id: 'udf-substring_index', name: 'SUBSTRING_INDEX', isFolder: false, parent: 'udf', content: 'ADD JAR hdfs://10.20.8.70:8020/user/hadoop/udf/SubStringIndexUDF.jar;\nCREATE TEMPORARY FUNCTION SUBSTRING_INDEX AS \'com.anjuke.dw.hive.udf.SubStringIndex\';\n'},
-                    {id: 'utf-rank', name: 'RANK', isFolder: false, parent: 'udf', content: 'ADD JAR hdfs://10.20.8.70:8020/user/hadoop/udf/RankUDF.jar;\nCREATE TEMPORARY FUNCTION RANK AS \'com.anjuke.dw.hive.udf.Rank\';\n'},
-                    {id: 'utf-md5', name: 'MD5', isFolder: false, parent: 'udf', content: 'ADD JAR hdfs://10.20.8.70:8020/user/hadoop/udf/MD5UDF.jar;\nCREATE TEMPORARY FUNCTION MD5 AS \'com.anjuke.dw.hive.udf.MD5\';\n'},
-
-                    {id: 'opt', name: '优化选项', isFolder: true, parent: 'root'},
-                    {id: 'opt-reducer', name: 'Reducer数量', isFolder: false, parent: 'opt', content: 'SET mapred.reducer.tasks = 20;\n'},
-                    {id: 'opt-mapjoin', name: 'Map-side Join', isFolder: false, parent: 'opt', content: 'SET hive.auto.convert.join = true;\n'}
-                ],
-                getChildren: function(object) {
-                    return this.query({parent: object.id});
-                }
-            });
-
-            var model = new ObjectStoreModel({
-                store: store,
-                query: {id: 'root'},
-                mayHaveChildren: function(item) {
-                    return item.isFolder;
-                },
-            });
-
-            var tree = new Tree({
-                model: model,
-                showRoot: false,
-                onDblClick: function(item) {
-
-                    if (item.isFolder) {
-                        return;
-                    }
-
-                    var central = registry.byId('central');
-                    var pane = central.selectedChildWidget;
-
-                    if (typeof pane == 'undefined') {
-                        alert('请先打开一个文档。');
-                        return;
-                    }
-
-                    var editor = pane.codeMirror;
-                    editor.replaceRange(item.content, editor.getCursor());
-                }
-            }, 'treeTemplate');
+            var editor = pane.codeMirror;
+            editor.replaceRange(content, editor.getCursor());
         },
 
         _theEnd: undefined

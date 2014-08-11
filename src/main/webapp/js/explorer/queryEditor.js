@@ -25,6 +25,7 @@ define('explorer/queryEditor', [
     'dijit/form/TextBox',
     'dijit/form/Button',
     'dijit/form/CheckBox',
+    'dijit/form/NumberSpinner',
     'dijit/Toolbar',
     'dijit/Fieldset',
     'dgrid/Grid',
@@ -37,7 +38,8 @@ define('explorer/queryEditor', [
     'cm/mode/sql/sql',
     'explorer/queryEditor/taskStatus'
 ], function(declare, lang, config, array, ready, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable,
-            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, CheckBox, Toolbar, Fieldset,
+            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button,
+            CheckBox, NumberSpinner, Toolbar, Fieldset,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror, cmdModeSql, taskStatus) {
 
     var QueryEditor = declare(null, {
@@ -439,34 +441,51 @@ define('explorer/queryEditor', [
             });
         },
 
+        udfList: [
+            {name: 'SUBSTRING_INDEX', jar: 'SubStringIndexUDF.jar', clazz: 'com.anjuke.dw.hive.udf.SubStringIndex'},
+            {name: 'RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
+            {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'}
+        ],
         initOption: function() {
             var self = this;
 
-            var pane = registry.byId('divOption');
+            var pane = registry.byId('paneOption');
 
             // udf
-            var udfList = [
-                {name: 'SUBSTRING_INDEX', jar: 'SubStringIndexUDF.jar', clazz: 'com.anjuke.dw.hive.udf.SubStringIndex'},
-                {name: 'RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
-                {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'}
-            ];
-
-            var ul = '<ul class="option-list">';
-            array.forEach(udfList, function(udf, i) {
-                ul += '<li><label><input type="checkbox" data-dojo-type="dijit/form/CheckBox"> ' + udf.name + '</label></li>';
+            var ulUdf = '<ul class="option-list">';
+            array.forEach(self.udfList, function(udf, i) {
+                ulUdf += '<li><a href="javascript:void(0);">添加</a>'
+                       + '<label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionUdf" value="' + udf.name + '"> ' + udf.name + '</label>'
+                       + '</li>';
             });
-            ul += '</ul>';
+            ulUdf += '</ul>';
 
             var fsUdf = new Fieldset({
                 title: 'UDF',
-                toggleable: false,
-                content: ul
+                content: ulUdf
             });
             pane.addChild(fsUdf);
 
+            // set
+            var ulSet = '<ul class="option-list">'
+                      + '<li><a href="javascript:void(0);">添加</a>'
+                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionReducerCount"> Reducer数量</label>'
+                      + '  <input type="text" name="optionReducerCountValue" value="20" data-dojo-type="dijit/form/NumberSpinner" style="width: 60px;">'
+                      + '</li>'
+
+                      + '<li><a href="javascript:void(0);">添加</a>'
+                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionMapsideJoin"> Map-side JOIN</label>'
+                      + '</li>'
+
+                      + '<li><a href="javascript:void(0);">添加</a>'
+                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionShark"> Shark</label>'
+                      + '</li>'
+                      + '</ul>';
+
             var fsSet = new Fieldset({
                 title: '配置项',
-                toggleable: false
+                content: ulSet,
+                style: 'margin-top: 10px;'
             });
             pane.addChild(fsSet);
         },

@@ -5,6 +5,8 @@ import org.scalatra.sbt.PluginKeys._
 import com.mojolly.scalate.ScalatePlugin._
 import ScalateKeys._
 import com.earldouglas.xsbtwebplugin.PluginKeys._
+import sbtassembly.Plugin._
+import sbtassembly.Plugin.AssemblyKeys._
 
 object DwExplorerBuild extends Build {
   val Organization = "com.anjuke.dw"
@@ -17,7 +19,7 @@ object DwExplorerBuild extends Build {
   lazy val project = Project (
     "dw_explorer",
     file("."),
-    settings = Defaults.defaultSettings ++ ScalatraPlugin.scalatraWithJRebel ++ scalateSettings ++ Seq(
+    settings = Defaults.defaultSettings ++ ScalatraPlugin.scalatraWithJRebel ++ scalateSettings ++ assemblySettings ++ Seq(
       organization := Organization,
       name := Name,
       version := Version,
@@ -28,9 +30,9 @@ object DwExplorerBuild extends Build {
         "org.scalatra" %% "scalatra-scalate" % ScalatraVersion,
         "org.scalatra" %% "scalatra-specs2" % ScalatraVersion % "test",
         "ch.qos.logback" % "logback-classic" % "1.0.6" % "runtime",
-        "org.eclipse.jetty" % "jetty-webapp" % JettyVersion % "container",
+        "org.eclipse.jetty" % "jetty-webapp" % JettyVersion % "container;compile",
         "org.eclipse.jetty" % "jetty-plus" % JettyVersion % "container",
-        "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container;provided;test" artifacts (Artifact("javax.servlet", "jar", "jar")),
+        "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container;compile;provided;test" artifacts (Artifact("javax.servlet", "jar", "jar")),
         "org.webjars" % "dojo" % "1.9.3",
         "org.scalatra" %% "scalatra-json" % ScalatraVersion,
         "org.json4s" %% "json4s-jackson" % "3.2.10",
@@ -58,7 +60,9 @@ object DwExplorerBuild extends Build {
           )
         )
       },
-      env in Compile := Some(file(".") / "jetty-env.xml" asFile)
+      env in Compile := Some(file(".") / "jetty-env.xml" asFile),
+      sbt.Keys.test in assembly := {},
+      mainClass in assembly := Some("Main")
     )
   )
 }

@@ -461,6 +461,9 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       case (p, v) =>
         result = result.replace("${" + p + "}", v)
     }
+    
+    // replace udf path
+    result = result.replace("/home/hadoop/dwetl/hiveudf/", Config("common", "udf.path"))
 
     result
   }

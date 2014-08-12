@@ -93,3 +93,27 @@ html, body {
     overflow-y: scroll;
     overflow-x: scroll;
 }
+
+ul.option-list {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+}
+
+ul.option-list li {
+    margin: 0;
+    padding: 0;
+    line-height: 24px;
+}
+
+ul.option-list a {
+    font-size: 12px;
+    color: silver;
+    text-decoration: none;
+    float: right;
+}
+
+ul.option-list a:hover {
+    color: black;
+    text-decoration: underline;
+}

@@ -3,9 +3,11 @@ define('explorer/queryEditor', [
     'dojo/_base/lang',
     'dojo/_base/config',
     'dojo/_base/array',
+    'dojo/ready',
     'dojo/query',
     'dojo/html',
     'dojo/dom-style',
+    'dojo/dom-attr',
     'dojo/on',
     'dojo/date/locale',
     'dojo/request',
@@ -23,7 +25,10 @@ define('explorer/queryEditor', [
     'dijit/form/Select',
     'dijit/form/TextBox',
     'dijit/form/Button',
+    'dijit/form/CheckBox',
+    'dijit/form/NumberSpinner',
     'dijit/Toolbar',
+    'dijit/Fieldset',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
@@ -32,19 +37,21 @@ define('explorer/queryEditor', [
     'put-selector/put',
     'cm/lib/codemirror',
     'cm/mode/sql/sql',
-    'explorer/queryEditor/taskStatus',
-    'dojo/domReady!'
-], function(declare, lang, config, array, query, html, domStyle, on, date, request, json, Memory, JsonRest, Observable,
-            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button, Toolbar,
+    'explorer/queryEditor/taskStatus'
+], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, on, date, request, json, Memory, JsonRest, Observable,
+            registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button,
+            CheckBox, NumberSpinner, Toolbar, Fieldset,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror, cmdModeSql, taskStatus) {
 
     var QueryEditor = declare(null, {
 
         constructor: function() {
             var self = this;
-            self.initDocument();
-            self.initMetadata();
-            self.initTemplate();
+            ready(function() {
+                self.initDocument();
+                self.initMetadata();
+                self.initOption();
+            });
         },
 
         initDocument: function() {
@@ -161,11 +168,11 @@ define('explorer/queryEditor', [
                             });
 
                             btnRunSelected.on('click', function() {
-                                taskStatus.submitTask(editor.getSelection());
+                                taskStatus.submitTask(self.getOptions() + editor.getSelection());
                             });
 
                             btnRunAll.on('click', function() {
-                                taskStatus.submitTask(editor.getValue());
+                                taskStatus.submitTask(self.getOptions() + editor.getValue());
                             });
 
                         });
@@ -435,60 +442,206 @@ define('explorer/queryEditor', [
             });
         },
 
-        initTemplate: function() {
+        udfList: [
+            {name: 'SUBSTRING_INDEX', jar: 'SubStringIndexUDF.jar', clazz: 'com.anjuke.dw.hive.udf.SubStringIndex'},
+            {name: 'RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
+            {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'}
+        ],
+
+        formatOptionUdf: function(name) {
+            var self = this;
+            var udf = array.filter(self.udfList, function(item) {
+                return item.name == name;
+            })[0];
+            return 'ADD JAR /home/hadoop/dwetl/hiveudf/' + udf.jar + ';\n'
+                 + 'CREATE TEMPORARY FUNCTION ' + udf.name + ' AS \'' + udf.clazz + '\';\n';
+        },
+
+        formatOptionSet: function(name) {
             var self = this;
 
-            var store = Memory({
-                data: [
-                    {id: 'root'},
+            switch (name) {
+            case 'reducerCount':
+                var nsReducerCount = query('[name="optionReducerCountValue"]')[0];
+                return 'SET mapred.reducer.tasks = ' + domAttr.get(nsReducerCount, 'value') + ';\n';
 
-                    {id: 'stmt', name: '常用语句', isFolder: true, parent: 'root'},
-                    {id: 'stmt-create', name: 'CREATE TABLE', isFolder: false, parent: 'stmt', content: 'CREATE TABLE db.table (\n  col1 type,\n  col2 type\n)\nPARTITIONED BY (col3 STRING)\nROW FORMAT DELIMITED FIELDS TERMINATED BY \'\\t\';\n'},
-                    {id: 'stmt-insert', name: 'INSERT OVERWRITE', isFolder: false, parent: 'stmt', content: 'INSERT OVERWRITE TABLE db.table PARTITION (col3 = ${dealDate})\nAS SELECT\n  col1,\n  col2\nFROM db.table;\n'},
+            case 'mapsideJoin':
+                return 'SET hive.auto.convert.join = true;\n';
 
-                    {id: 'udf', name: 'UDF', isFolder: true, parent: 'root'},
-                    {id: 'udf-substring_index', name: 'SUBSTRING_INDEX', isFolder: false, parent: 'udf', content: 'ADD JAR hdfs://10.20.8.70:8020/user/hadoop/udf/SubStringIndexUDF.jar;\nCREATE TEMPORARY FUNCTION SUBSTRING_INDEX AS \'com.anjuke.dw.hive.udf.SubStringIndex\';\n'},
-                    {id: 'utf-rank', name: 'RANK', isFolder: false, parent: 'udf', content: 'ADD JAR hdfs://10.20.8.70:8020/user/hadoop/udf/RankUDF.jar;\nCREATE TEMPORARY FUNCTION RANK AS \'com.anjuke.dw.hive.udf.Rank\';\n'},
-                    {id: 'utf-md5', name: 'MD5', isFolder: false, parent: 'udf', content: 'ADD JAR hdfs://10.20.8.70:8020/user/hadoop/udf/MD5UDF.jar;\nCREATE TEMPORARY FUNCTION MD5 AS \'com.anjuke.dw.hive.udf.MD5\';\n'},
+            case 'shark':
+                return 'SET dw.engine = shark;\n';
+            }
+        },
 
-                    {id: 'opt', name: '优化选项', isFolder: true, parent: 'root'},
-                    {id: 'opt-reducer', name: 'Reducer数量', isFolder: false, parent: 'opt', content: 'SET mapred.reducer.tasks = 20;\n'},
-                    {id: 'opt-mapjoin', name: 'Map-side Join', isFolder: false, parent: 'opt', content: 'SET hive.auto.convert.join = true;\n'}
-                ],
-                getChildren: function(object) {
-                    return this.query({parent: object.id});
-                }
+        initOption: function() {
+            var self = this;
+
+            var pane = registry.byId('paneOption');
+
+            // udf
+            var ulUdf = '<ul class="option-list">';
+            array.forEach(self.udfList, function(udf, i) {
+                ulUdf += '<li><a href="javascript:void(0);" option_udf="' + udf.name + '">添加</a>'
+                       + '<label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionUdf" value="' + udf.name + '"> ' + udf.name + '</label>'
+                       + '</li>';
+            });
+            ulUdf += '</ul>';
+
+            var fsUdf = new Fieldset({
+                title: 'UDF',
+                content: ulUdf
+            });
+            pane.addChild(fsUdf);
+
+            array.forEach(query('[name="optionUdf"]'), function(cb) {
+                on(cb, 'change', function() {
+                    self.saveOptions();
+                });
             });
 
-            var model = new ObjectStoreModel({
-                store: store,
-                query: {id: 'root'},
-                mayHaveChildren: function(item) {
-                    return item.isFolder;
-                },
+            array.forEach(query('a[option_udf]'), function(a) {
+                on(a, 'click', function() {
+                    self.insertOption(self.formatOptionUdf(domAttr.get(a, 'option_udf')));
+                });
             });
 
-            var tree = new Tree({
-                model: model,
-                showRoot: false,
-                onDblClick: function(item) {
+            // set
+            var ulSet = '<ul class="option-list">'
+                      + '<li><a href="javascript:void(0);" option_set="reducerCount">添加</a>'
+                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionSet" value="reducerCount"> Reducer数量</label>'
+                      + '  <input type="text" name="optionReducerCountValue" value="20" data-dojo-type="dijit/form/NumberSpinner" style="width: 60px;">'
+                      + '</li>'
 
-                    if (item.isFolder) {
-                        return;
-                    }
+                      + '<li><a href="javascript:void(0);" option_set="mapsideJoin">添加</a>'
+                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionSet" value="mapsideJoin"> Map-side JOIN</label>'
+                      + '</li>'
 
-                    var central = registry.byId('central');
-                    var pane = central.selectedChildWidget;
+                      + '<li><a href="javascript:void(0);" option_set="shark">添加</a>'
+                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionSet" value="shark"> Shark</label>'
+                      + '</li>'
+                      + '</ul>';
 
-                    if (typeof pane == 'undefined') {
-                        alert('请先打开一个文档。');
-                        return;
-                    }
+            var fsSet = new Fieldset({
+                title: '配置项',
+                content: ulSet,
+                style: 'margin-top: 10px;'
+            });
+            pane.addChild(fsSet);
 
-                    var editor = pane.codeMirror;
-                    editor.replaceRange(item.content, editor.getCursor());
+            array.forEach(query('[name="optionSet"]'), function(cb) {
+                on(cb, 'change', function() {
+                    self.saveOptions();
+                });
+            });
+
+            array.forEach(query('a[option_set]'), function(a) {
+                on(a, 'click', function() {
+                    self.insertOption(self.formatOptionSet(domAttr.get(a, 'option_set')));
+                });
+            });
+
+            array.forEach(query('[name="optionReducerCountValue"]'), function(ns) {
+                on(registry.getEnclosingWidget(ns), 'change', function() {
+                    self.saveOptions();
+                });
+            });
+
+            self.readOptions();
+        },
+
+        getOptions: function() {
+            var self = this;
+
+            var result = '';
+
+            array.forEach(query('[name="optionUdf"]:checked'), function(cb) {
+                result += self.formatOptionUdf(domAttr.get(cb, 'value'));
+            });
+
+            array.forEach(query('[name="optionSet"]:checked'), function(cb) {
+                result += self.formatOptionSet(domAttr.get(cb, 'value'));
+            });
+
+            return result;
+        },
+
+        saveOptions: function() {
+            var self = this;
+
+            if (!window.localStorage) {
+                return;
+            }
+
+            var options = {
+                udf: [],
+                set: []
+            };
+
+            array.forEach(query('[name="optionUdf"]:checked'), function(cb) {
+                options.udf.push(domAttr.get(cb, 'value'));
+            });
+
+            array.forEach(query('[name="optionSet"]:checked'), function(cb) {
+
+                var option = {
+                    name: domAttr.get(cb, 'value')
+                };
+
+                if (option.name == 'reducerCount') {
+                    option.value = domAttr.get(query('[name="optionReducerCountValue"]')[0], 'value');
                 }
-            }, 'treeTemplate');
+
+                options.set.push(option);
+            });
+
+            window.localStorage['dw.explorer.options'] = json.stringify(options);
+        },
+
+        readOptions: function() {
+            var self = this;
+
+            if (!window.localStorage) {
+                return;
+            }
+
+            var options = {
+                udf: [],
+                set: []
+            };
+
+            try {
+                lang.mixin(options, json.parse(window.localStorage['dw.explorer.options']));
+            } catch (e) {}
+
+            array.forEach(options.udf, function(name) {
+                array.forEach(query('[name="optionUdf"][value="' + name + '"]'), function(cb) {
+                    registry.getEnclosingWidget(cb).set('checked', true);
+                });
+            });
+
+            array.forEach(options.set, function(option) {
+                array.forEach(query('[name="optionSet"][value="' + option.name + '"]'), function(cb) {
+                    registry.getEnclosingWidget(cb).set('checked', true);
+                    if (option.name == 'reducerCount') {
+                        registry.getEnclosingWidget(query('[name="optionReducerCountValue"]')[0]).set('value', option.value);
+                    }
+                });
+            });
+        },
+
+        insertOption: function(content) {
+            var self = this;
+
+            var central = registry.byId('central');
+            var pane = central.selectedChildWidget;
+
+            if (typeof pane == 'undefined') {
+                alert('请先打开一个文档。');
+                return;
+            }
+
+            var editor = pane.codeMirror;
+            editor.replaceRange(content, editor.getCursor());
         },
 
         _theEnd: undefined

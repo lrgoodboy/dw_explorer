@@ -447,8 +447,8 @@ define('explorer/queryEditor', [
             {name: 'RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
             {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'}
         ],
-        
-        formatUdf: function(name) {
+
+        formatOptionUdf: function(name) {
             var self = this;
             var udf = array.filter(self.udfList, function(item) {
                 return item.name == name;
@@ -456,23 +456,23 @@ define('explorer/queryEditor', [
             return 'ADD JAR /home/hadoop/dwetl/hiveudf/' + udf.jar + ';\n'
                  + 'CREATE TEMPORARY FUNCTION ' + udf.name + ' AS \'' + udf.clazz + '\';\n';
         },
-        
+
         formatOptionSet: function(name) {
             var self = this;
-            
+
             switch (name) {
             case 'reducerCount':
                 var nsReducerCount = query('[name="optionReducerCountValue"]')[0];
                 return 'SET mapred.reducer.tasks = ' + domAttr.get(nsReducerCount, 'value') + ';\n';
-                
+
             case 'mapsideJoin':
                 return 'SET hive.auto.convert.join = true;\n';
-                
+
             case 'shark':
                 return 'SET dw.engine = shark;\n';
             }
         },
-        
+
         initOption: function() {
             var self = this;
 
@@ -492,10 +492,16 @@ define('explorer/queryEditor', [
                 content: ulUdf
             });
             pane.addChild(fsUdf);
-            
+
+            array.forEach(query('[name="optionUdf"]'), function(cb) {
+                on(cb, 'change', function() {
+                    self.saveOptions();
+                });
+            });
+
             array.forEach(query('a[option_udf]'), function(a) {
                 on(a, 'click', function() {
-                    self.insertOption(self.formatUdf(domAttr.get(a, 'option_udf')));
+                    self.insertOption(self.formatOptionUdf(domAttr.get(a, 'option_udf')));
                 });
             });
 
@@ -521,28 +527,106 @@ define('explorer/queryEditor', [
                 style: 'margin-top: 10px;'
             });
             pane.addChild(fsSet);
-            
-            array.forEach(query('a[option_set]'), function(a) {
-                on(a, 'click', function() {
-                    self.insertOption(self.formatOptionSet(domAttr.get(a, 'option_set'))); 
+
+            array.forEach(query('[name="optionSet"]'), function(cb) {
+                on(cb, 'change', function() {
+                    self.saveOptions();
                 });
             });
+
+            array.forEach(query('a[option_set]'), function(a) {
+                on(a, 'click', function() {
+                    self.insertOption(self.formatOptionSet(domAttr.get(a, 'option_set')));
+                });
+            });
+
+            array.forEach(query('[name="optionReducerCountValue"]'), function(ns) {
+                on(registry.getEnclosingWidget(ns), 'change', function() {
+                    self.saveOptions();
+                });
+            });
+
+            self.readOptions();
         },
 
         getOptions: function() {
             var self = this;
 
             var result = '';
-            
-            array.forEach(query('[name="optionUdf"]:checked'), function(cbUdf) {
-                result += self.formatUdf(domAttr.get(cbUdf, 'value'));
+
+            array.forEach(query('[name="optionUdf"]:checked'), function(cb) {
+                result += self.formatOptionUdf(domAttr.get(cb, 'value'));
             });
-            
-            array.forEach(query('[name="optionSet"]:checked'), function(cbSet) {
-                result += self.formatOptionSet(domAttr.get(cbSet, 'value'));
+
+            array.forEach(query('[name="optionSet"]:checked'), function(cb) {
+                result += self.formatOptionSet(domAttr.get(cb, 'value'));
             });
 
             return result;
+        },
+
+        saveOptions: function() {
+            var self = this;
+
+            if (!window.localStorage) {
+                return;
+            }
+
+            var options = {
+                udf: [],
+                set: []
+            };
+
+            array.forEach(query('[name="optionUdf"]:checked'), function(cb) {
+                options.udf.push(domAttr.get(cb, 'value'));
+            });
+
+            array.forEach(query('[name="optionSet"]:checked'), function(cb) {
+
+                var option = {
+                    name: domAttr.get(cb, 'value')
+                };
+
+                if (option.name == 'reducerCount') {
+                    option.value = domAttr.get(query('[name="optionReducerCountValue"]')[0], 'value');
+                }
+
+                options.set.push(option);
+            });
+
+            window.localStorage['dw.explorer.options'] = json.stringify(options);
+        },
+
+        readOptions: function() {
+            var self = this;
+
+            if (!window.localStorage) {
+                return;
+            }
+
+            var options = {
+                udf: [],
+                set: []
+            };
+
+            try {
+                lang.mixin(options, json.parse(window.localStorage['dw.explorer.options']));
+            } catch (e) {}
+
+            array.forEach(options.udf, function(name) {
+                array.forEach(query('[name="optionUdf"][value="' + name + '"]'), function(cb) {
+                    registry.getEnclosingWidget(cb).set('checked', true);
+                });
+            });
+
+            array.forEach(options.set, function(option) {
+                array.forEach(query('[name="optionSet"][value="' + option.name + '"]'), function(cb) {
+                    registry.getEnclosingWidget(cb).set('checked', true);
+                    if (option.name == 'reducerCount') {
+                        registry.getEnclosingWidget(query('[name="optionReducerCountValue"]')[0]).set('value', option.value);
+                    }
+                });
+            });
         },
 
         insertOption: function(content) {

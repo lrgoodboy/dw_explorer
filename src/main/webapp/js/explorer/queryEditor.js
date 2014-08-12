@@ -457,6 +457,22 @@ define('explorer/queryEditor', [
                  + 'CREATE TEMPORARY FUNCTION ' + udf.name + ' AS \'' + udf.clazz + '\';\n';
         },
         
+        formatOptionSet: function(name) {
+            var self = this;
+            
+            switch (name) {
+            case 'reducerCount':
+                var nsReducerCount = query('[name="optionReducerCountValue"]')[0];
+                return 'SET mapred.reducer.tasks = ' + domAttr.get(nsReducerCount, 'value') + ';\n';
+                
+            case 'mapsideJoin':
+                return 'SET hive.auto.convert.join = true;\n';
+                
+            case 'shark':
+                return 'SET dw.engine = shark;\n';
+            }
+        },
+        
         initOption: function() {
             var self = this;
 
@@ -485,17 +501,17 @@ define('explorer/queryEditor', [
 
             // set
             var ulSet = '<ul class="option-list">'
-                      + '<li><a href="javascript:void(0);" option_reducer_count="1">添加</a>'
-                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionReducerCount"> Reducer数量</label>'
+                      + '<li><a href="javascript:void(0);" option_set="reducerCount">添加</a>'
+                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionSet" value="reducerCount"> Reducer数量</label>'
                       + '  <input type="text" name="optionReducerCountValue" value="20" data-dojo-type="dijit/form/NumberSpinner" style="width: 60px;">'
                       + '</li>'
 
-                      + '<li><a href="javascript:void(0);" option_mapside_join="1">添加</a>'
-                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionMapsideJoin"> Map-side JOIN</label>'
+                      + '<li><a href="javascript:void(0);" option_set="mapsideJoin">添加</a>'
+                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionSet" value="mapsideJoin"> Map-side JOIN</label>'
                       + '</li>'
 
-                      + '<li><a href="javascript:void(0);" option_shark="1">添加</a>'
-                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionShark"> Shark</label>'
+                      + '<li><a href="javascript:void(0);" option_set="shark">添加</a>'
+                      + '  <label><input type="checkbox" data-dojo-type="dijit/form/CheckBox" name="optionSet" value="shark"> Shark</label>'
                       + '</li>'
                       + '</ul>';
 
@@ -505,31 +521,26 @@ define('explorer/queryEditor', [
                 style: 'margin-top: 10px;'
             });
             pane.addChild(fsSet);
+            
+            array.forEach(query('a[option_set]'), function(a) {
+                on(a, 'click', function() {
+                    self.insertOption(self.formatOptionSet(domAttr.get(a, 'option_set'))); 
+                });
+            });
         },
 
         getOptions: function() {
             var self = this;
 
             var result = '';
-
-            // udf
+            
             array.forEach(query('[name="optionUdf"]:checked'), function(cbUdf) {
                 result += self.formatUdf(domAttr.get(cbUdf, 'value'));
             });
-
-            // set
-            if (query('[name="optionReducerCount"]:checked').length > 0) {
-                var nsReducerCount = query('[name="optionReducerCountValue"]')[0];
-                result += 'SET mapred.reducer.tasks = ' + domAttr.get(nsReducerCount, 'value') + ';\n';
-            }
-
-            if (query('[name="optionMapsideJoin"]:checked').length > 0) {
-                result += 'SET hive.auto.convert.join = true;\n';
-            }
-
-            if (query('[name="optionShark"]:checked').length > 0) {
-                result += 'SET dw.engine = shark;\n';
-            }
+            
+            array.forEach(query('[name="optionSet"]:checked'), function(cbSet) {
+                result += self.formatOptionSet(domAttr.get(cbSet, 'value'));
+            });
 
             return result;
         },

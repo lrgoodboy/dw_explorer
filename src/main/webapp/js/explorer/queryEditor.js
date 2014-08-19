@@ -122,17 +122,17 @@ define('explorer/queryEditor', [
                             var toolbar = new Toolbar();
 
                             var btnSave = new Button({
-                                label: 'Save'
+                                label: '保存'
                             });
                             toolbar.addChild(btnSave);
 
                             var btnRunSelected = new Button({
-                                label: 'Run Selected'
+                                label: '运行所选'
                             });
                             toolbar.addChild(btnRunSelected);
 
                             var btnRunAll = new Button({
-                                label: 'Run All'
+                                label: '运行全部'
                             });
                             toolbar.addChild(btnRunAll);
 
@@ -163,6 +163,12 @@ define('explorer/queryEditor', [
                                 rest.put({
                                     id: item.id,
                                     content: editor.getValue()
+                                }).then(function() {
+
+                                    var toaster = registry.byId('toaster');
+                                    toaster.setContent('<i>保存成功</i>');
+                                    toaster.show();
+
                                 });
 
                             });

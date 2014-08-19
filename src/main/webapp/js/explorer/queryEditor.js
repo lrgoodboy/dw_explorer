@@ -463,7 +463,7 @@ define('explorer/queryEditor', [
             switch (name) {
             case 'reducerCount':
                 var nsReducerCount = query('[name="optionReducerCountValue"]')[0];
-                return 'SET mapred.reducer.tasks = ' + domAttr.get(nsReducerCount, 'value') + ';\n';
+                return 'SET mapred.reduce.tasks = ' + domAttr.get(nsReducerCount, 'value') + ';\n';
 
             case 'mapsideJoin':
                 return 'SET hive.auto.convert.join = true;\n';

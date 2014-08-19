@@ -14,14 +14,13 @@ define('explorer/queryEditor/taskStatus', [
     'dijit/layout/ContentPane',
     'dijit/Menu',
     'dijit/MenuItem',
-    'dojox/socket',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
     'put-selector/put'
 ], function(declare, lang, config, array, ready, request, json, cookie, Memory, JsonRest, Observable,
-            registry, ContentPane, Menu, MenuItem, Socket,
+            registry, ContentPane, Menu, MenuItem,
             Grid, OnDemandGrid, Selection, ColumnResizer,
             put) {
 
@@ -214,36 +213,51 @@ define('explorer/queryEditor/taskStatus', [
         initWebSocket: function() {
             var self = this;
 
-            var socket = Socket('ws://' + config.websocketServer + '/explorer/query-task/list');
+            if (typeof WebSocket == 'undefined') {
+                alert('您的浏览器不支持WebSocket，请更换。');
+                return;
+            }
 
-            socket.on('open', function(event) {
+            var socket = new WebSocket('ws://' + config.websocketServer + '/explorer/query-task/list');
+
+            socket.onopen = function(event) {
                 console.log('WebSocket connected, subscribing to remote events.');
                 socket.send(json.stringify({
                     action: 'subscribe',
                     token: cookie(config.cookieKey)
                 }));
-            });
+            };
 
-            socket.on('message', function(event) {
+            socket.onmessage = function(event) {
+
                 var message = json.parse(event.data);
-                if ('task' in message) {
-                    self.taskStore.notify(message.task, message.task.id);
-                    self.showResult(message.task)
-                } else if ('status' in message) {
-                    if (message.status == 'error') {
-                        console.log('Something went wrong: ' + message.msg);
-                    }
-                } else {
-                    console.log('Unknown message: ' + json.stringify(message));
-                }
-            });
 
-            socket.on('close', function(event) {
+                if (message.status != 'ok') {
+                    console.log('Something went wrong: ' + message.msg);
+                    return;
+                }
+
+                if ('subscribe' in message) {
+                    console.log('Subscribed to user id: ' + message.subscribe);
+                    return;
+                }
+
+                if ('task' in message) {
+                    console.log('Receive task event, id: ' + message.task.id);
+                    self.taskStore.notify(message.task, message.task.id);
+                    self.showResult(message.task);
+                    return;
+                }
+
+                console.log('Unknown message: ' + json.stringify(message));
+            };
+
+            socket.onclose = function(event) {
                 console.log('Connection is closed, reconnect in 3 seconds.');
                 setTimeout(function() {
                     self.initWebSocket();
                 }, 3000);
-            });
+            };
         },
 
         _theEnd: undefined

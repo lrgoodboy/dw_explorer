@@ -22,7 +22,18 @@ class QueryTaskServlet extends WebSocketServlet {
 
 }
 
+object QueryTaskWebSocket {
+
+  def sendMessage(connection: Connection, status: String, data: Map[String, JValue] = Map()): Unit = {
+    val message = compact(render(data + ("status" -> JString(status))))
+    connection.sendMessage(message)
+  }
+
+}
+
 sealed class QueryTaskWebSocket(actorSystem: ActorSystem) extends WebSocket.OnTextMessage {
+
+  import QueryTaskWebSocket._
 
   protected implicit val jsonFormats: Formats = DefaultFormats
   private val logger = LoggerFactory.getLogger(getClass)
@@ -46,7 +57,7 @@ sealed class QueryTaskWebSocket(actorSystem: ActorSystem) extends WebSocket.OnTe
     } catch {
       case e: Exception => {
         logger.info("Fail to process message: ${data}", e)
-        sendMessage("error", Map("msg" -> e.toString))
+        sendMessage(connection, "error", Map("msg" -> e.toString))
       }
     }
   }
@@ -62,14 +73,10 @@ sealed class QueryTaskWebSocket(actorSystem: ActorSystem) extends WebSocket.OnTe
           case Some(user) =>
             this.user = user
             subscribe
+            sendMessage(connection, "ok", Map("subscribe" -> user.id))
           case None => throw new Exception("Invalid token.")
         }
     }
-  }
-
-  private def sendMessage(status: String, data: Map[String, JValue]): Unit = {
-    val message = compact(render(data + ("status" -> JString(status))))
-    connection.sendMessage(message)
   }
 
   private def subscribe: Unit = {
@@ -96,10 +103,12 @@ sealed class QueryTaskWebSocket(actorSystem: ActorSystem) extends WebSocket.OnTe
 
 sealed class Subscriber(connection: Connection, user: User) extends Actor {
 
+  import QueryTaskWebSocket._
+
   def receive = {
     case TaskEvent(task) if task.userId == user.id =>
-      val data = ("task" -> QueryEditorServlet.formatTask(task))
-      connection.sendMessage(compact(render(data)))
+      val data: Map[String, JValue] = Map("task" -> QueryEditorServlet.formatTask(task))
+      sendMessage(connection, "ok", data)
   }
 
 }

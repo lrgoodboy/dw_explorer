@@ -175,12 +175,22 @@ define('explorer/queryEditor', [
 
                             });
 
+                            function submitTask(queries) {
+                                btnRunSelected.set('disabled', true);
+                                btnRunAll.set('disabled', true);
+                                taskStatus.submitTask(queries);
+                                setTimeout(function() {
+                                    btnRunSelected.set('disabled', false);
+                                    btnRunAll.set('disabled', false);
+                                }, 1500);
+                            }
+
                             btnRunSelected.on('click', function() {
-                                taskStatus.submitTask(self.getOptions() + editor.getSelection());
+                                submitTask(self.getOptions() + editor.getSelection());
                             });
 
                             btnRunAll.on('click', function() {
-                                taskStatus.submitTask(self.getOptions() + editor.getValue());
+                                submitTask(self.getOptions() + editor.getValue());
                             });
 
                         });

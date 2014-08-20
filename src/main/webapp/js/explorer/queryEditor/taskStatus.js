@@ -200,14 +200,36 @@ define('explorer/queryEditor/taskStatus', [
             var self = this;
 
             queries = lang.trim(queries);
-            if (!queries) {
-                alert('Queries cannot be empty.');
-                return false;
+
+            // check empty
+            var sqls = queries.replace(/\/\*[\s\S]*?\*\//g, '').split(/;/);
+            sqls = array.map(sqls, function(item) {
+                return lang.trim(item);
+            });
+            sqls = array.filter(sqls, function(item) {
+                return !!item;
+            });
+
+            var isEmpty = true;
+            if (sqls.length > 0) {
+                var ptrnBuffer = /^(SET|ADD\s+JAR|CREATE\s+TEMPORARY\s+FUNCTION|USE)\s+/i;
+                if (!ptrnBuffer.test(sqls[sqls.length - 1])) {
+                    isEmpty = false;
+                }
             }
 
+            if (isEmpty) {
+                alert('查询语句不能为空。');
+                return;
+            }
+
+            // submit task
             self.taskStore.add({
                 queries: queries
             });
+
+            // switch to task status pane
+            registry.byId('bottomCol').selectChild('paneTaskStatus');
         },
 
         initWebSocket: function() {

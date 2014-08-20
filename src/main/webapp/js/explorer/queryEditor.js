@@ -29,6 +29,7 @@ define('explorer/queryEditor', [
     'dijit/form/CheckBox',
     'dijit/form/NumberSpinner',
     'dijit/Toolbar',
+    'dijit/ToolbarSeparator',
     'dijit/Fieldset',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
@@ -41,7 +42,7 @@ define('explorer/queryEditor', [
     'explorer/queryEditor/taskStatus'
 ], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, on, date, request, json, Memory, JsonRest, Observable, all,
             registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button,
-            CheckBox, NumberSpinner, Toolbar, Fieldset,
+            CheckBox, NumberSpinner, Toolbar, ToolbarSeparator, Fieldset,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror, cmdModeSql, taskStatus) {
 
     var QueryEditor = declare(null, {
@@ -124,17 +125,22 @@ define('explorer/queryEditor', [
                             var toolbar = new Toolbar();
 
                             var btnSave = new Button({
-                                label: '保存'
+                                showLabel: false,
+                                iconClass: 'dijitEditorIcon dijitEditorIconSave'
                             });
                             toolbar.addChild(btnSave);
 
                             var btnRunSelected = new Button({
-                                label: '运行所选'
+                                showLabel: false,
+                                iconClass: 'dijitEditorIcon dijitEditorIconCreateLink'
                             });
                             toolbar.addChild(btnRunSelected);
 
+                            toolbar.addChild(new ToolbarSeparator());
+
                             var btnRunAll = new Button({
-                                label: '运行全部'
+                                showLabel: false,
+                                iconClass: 'dijitEditorIcon dijitEditorIconSelectAll'
                             });
                             toolbar.addChild(btnRunAll);
 
@@ -155,7 +161,8 @@ define('explorer/queryEditor', [
                             // editor
                             var editor = CodeMirror(editorPane.domNode, {
                                 value: object.content,
-                                mode: 'text/x-hive'
+                                mode: 'text/x-hive',
+                                lineNumbers: true
                             });
 
                             editor.on('change', function() {
@@ -175,14 +182,18 @@ define('explorer/queryEditor', [
 
                             });
 
+                            var lastSubmit = new Date().getTime();
                             function submitTask(queries) {
+
                                 btnRunSelected.set('disabled', true);
                                 btnRunAll.set('disabled', true);
-                                taskStatus.submitTask(queries);
+
                                 setTimeout(function() {
                                     btnRunSelected.set('disabled', false);
                                     btnRunAll.set('disabled', false);
                                 }, 1500);
+
+                                taskStatus.submitTask(queries);
                             }
 
                             btnRunSelected.on('click', function() {

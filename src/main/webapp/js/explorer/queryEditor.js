@@ -15,6 +15,7 @@ define('explorer/queryEditor', [
     'dojo/store/Memory',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
+    'dojo/promise/all',
     'dijit/registry',
     'dijit/layout/ContentPane',
     'dijit/layout/LayoutContainer',
@@ -38,7 +39,7 @@ define('explorer/queryEditor', [
     'cm/lib/codemirror',
     'cm/mode/sql/sql',
     'explorer/queryEditor/taskStatus'
-], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, on, date, request, json, Memory, JsonRest, Observable,
+], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, on, date, request, json, Memory, JsonRest, Observable, all,
             registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button,
             CheckBox, NumberSpinner, Toolbar, Fieldset,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror, cmdModeSql, taskStatus) {
@@ -57,6 +58,7 @@ define('explorer/queryEditor', [
         initDocument: function() {
             var self = this;
 
+            // document tree
             var rest = JsonRest({
                 target: config.contextPath + '/query-editor/api/doc/',
             });
@@ -156,6 +158,10 @@ define('explorer/queryEditor', [
                                 mode: 'text/x-hive'
                             });
 
+                            editor.on('change', function() {
+                                self.autoSave[item.id] = true;
+                            });
+
                             pane.codeMirror = editor;
 
                             btnSave.on('click', function() {
@@ -164,11 +170,7 @@ define('explorer/queryEditor', [
                                     id: item.id,
                                     content: editor.getValue()
                                 }).then(function() {
-
-                                    var toaster = registry.byId('toaster');
-                                    toaster.setContent('<i>保存成功</i>');
-                                    toaster.show();
-
+                                    self.showToaster('文档 ' + object.name + ' 保存成功');
                                 });
 
                             });
@@ -266,9 +268,59 @@ define('explorer/queryEditor', [
                     }
                 }));
 
-
                 self.treeDoc.startup();
             });
+
+            // auto save task
+            setInterval(function() {
+
+                var autoSave = self.autoSave;
+                self.autoSave = {};
+
+                var savings = [];
+
+                for (id in autoSave) {
+
+                    var pane = registry.byId('editorPane_' + id);
+                    if (!pane || !pane.codeMirror) {
+                        return;
+                    }
+
+                    savings.push({
+                        promise: rest.put({
+                            id: id,
+                            content: pane.codeMirror.getValue()
+                        }),
+                        title: pane.get('title')
+                    });
+                };
+
+                if (savings.length == 0) {
+                    return;
+                }
+
+                var promises = array.map(savings, function(item) {
+                    return item.promise;
+                });
+
+                all(promises).then(function() {
+
+                    var titles = array.map(savings, function(item) {
+                        return item.title;
+                    });
+
+                    self.showToaster('以下文档已自动保存：<br>' + titles.join('<br>'));
+                });
+
+            }, 30000);
+        },
+
+        autoSave: {},
+
+        showToaster: function(content) {
+            var toaster = registry.byId('toaster');
+            toaster.setContent(content);
+            toaster.show();
         },
 
         initMetadata: function() {

@@ -192,11 +192,13 @@ define('explorer/queryEditor', [
             lang.mixin(CodeMirror.commands, {
 
                 save: function(cm) {
+                    var id = cm.getOption('docId');
                     self.docRest.put({
-                        id: cm.getOption('docId'),
+                        id: id,
                         content: cm.getValue()
                     }).then(function() {
                         self.showToaster('文档 ' + cm.getOption('docName') + ' 保存成功');
+                        delete self.autoSave[id];
                     });
                 },
 
@@ -239,6 +241,37 @@ define('explorer/queryEditor', [
             setInterval(function() {
                 self.saveAll();
             }, 30000);
+
+            // check before unload
+            on(window, 'beforeunload', function() {
+
+                var titles = array.map(self.getAutoSavePanes(), function(pane) {
+                    return pane.get('docName');
+                });
+
+                if (titles.length > 0) {
+                    return '以下文档尚未保存：\n' + titles.join('\n') + '\n确定要关闭页面吗？';
+                }
+            });
+        },
+
+        getAutoSavePanes: function() {
+            var self = this;
+
+            var panes = [];
+            for (id in self.autoSave) {
+
+                if (!self.autoSave.hasOwnProperty(id)) {
+                    continue;
+                }
+
+                var pane = registry.byId('editorPane_' + id);
+                if (pane) {
+                    panes.push(pane);
+                }
+            }
+
+            return panes;
         },
 
         openDocument: function(id) {
@@ -258,7 +291,13 @@ define('explorer/queryEditor', [
                 var pane = new ContentPane({
                     id: paneId,
                     title: object.name,
-                    closable: true
+                    closable: true,
+                    onClose: function() {
+                        if (pane.get('docId') in self.autoSave) {
+                            return confirm('该文档尚未保存，确定要关闭吗？');
+                        }
+                        return true;
+                    }
                 });
 
                 pane.set('docId', object.id);
@@ -341,44 +380,24 @@ define('explorer/queryEditor', [
         saveAll: function() {
             var self = this;
 
-            var autoSave = self.autoSave;
-            self.autoSave = {};
+            var promises = [], titles = [];
+            array.forEach(self.getAutoSavePanes(), function(pane) {
+                promises.push(self.docRest.put({
+                    id: pane.get('docId'),
+                    content: pane.get('editor').getValue()
+                }));
+                titles.push(pane.get('docName'));
+            });
 
-            var savings = [];
-
-            for (id in autoSave) {
-
-                var pane = registry.byId('editorPane_' + id);
-                if (!pane || !pane.get('editor')) {
-                    return;
-                }
-
-                savings.push({
-                    promise: self.docRest.put({
-                        id: id,
-                        content: pane.get('editor').getValue()
-                    }),
-                    title: pane.get('title')
-                });
-            };
-
-            if (savings.length == 0) {
+            if (promises.length == 0) {
                 return;
             }
 
-            var promises = array.map(savings, function(item) {
-                return item.promise;
-            });
-
             all(promises).then(function() {
-
-                var titles = array.map(savings, function(item) {
-                    return item.title;
-                });
-
                 self.showToaster('以下文档已保存：<br>' + titles.join('<br>'));
             });
 
+            self.autoSave = {};
         },
 
         showToaster: function(content) {

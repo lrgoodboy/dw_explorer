@@ -12,7 +12,8 @@
 <link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/dgrid.css")}">
 <link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/skins/claro.css")}">
 <link rel="stylesheet" href="${uri("/webjars/codemirror/4.2/lib/codemirror.css")}">
-<link rel="stylesheet" href="${uri("/css/query-editor.css")}">
+<link rel="stylesheet" href="${uri("/css/query-editor.css")}?${version}">
+<link rel="stylesheet" href="${uri("/css/icon.css")}?${version}">
 </head>
 <body class="claro">
 

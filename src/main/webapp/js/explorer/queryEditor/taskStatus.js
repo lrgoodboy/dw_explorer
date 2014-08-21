@@ -210,13 +210,10 @@ define('explorer/queryEditor/taskStatus', [
                 return !!item;
             });
 
-            var isEmpty = true;
-            if (sqls.length > 0) {
-                var ptrnBuffer = /^(SET|ADD\s+JAR|CREATE\s+TEMPORARY\s+FUNCTION|USE)\s+/i;
-                if (!ptrnBuffer.test(sqls[sqls.length - 1])) {
-                    isEmpty = false;
-                }
-            }
+            var ptrnBuffer = /^(SET|ADD\s+JAR|CREATE\s+TEMPORARY\s+FUNCTION|USE)\s+/i;
+            var isEmpty = !array.some(sqls, function(sql) {
+                return !ptrnBuffer.test(sql);
+            });
 
             if (isEmpty) {
                 alert('查询语句不能为空。');

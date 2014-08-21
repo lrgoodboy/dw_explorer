@@ -45,7 +45,7 @@ define('explorer/queryEditor/taskStatus', [
             // grid
             var CustomGrid = declare([OnDemandGrid, Selection]);
             self.grid = new CustomGrid({
-                className: 'grid-task-status grid-task-status-main',
+                className: 'grid-task-status grid-fill-container',
                 sort: [{attribute: 'id', descending: true}],
                 store: self.taskStore,
                 columns: [
@@ -128,7 +128,7 @@ define('explorer/queryEditor/taskStatus', [
                 closable: true
             });
 
-            var gridStatus = new Grid({
+            /*var gridStatus = new Grid({
                 className: 'dgrid-autoheight grid-task-status',
                 columns: [
                     {label: 'ID', field: 'id', sortable: false},
@@ -152,7 +152,7 @@ define('explorer/queryEditor/taskStatus', [
 
             gridStatus.renderArray([task]);
 
-            pane.addChild(gridStatus);
+            pane.addChild(gridStatus);*/
 
             var bottomCol = registry.byId('bottomCol');
             bottomCol.addChild(pane);
@@ -176,17 +176,24 @@ define('explorer/queryEditor/taskStatus', [
                         return;
                     }
 
-                    if (result.rows.length == 0) {
+                    /*if (result.rows.length == 0) {
                         put(pane.domNode, 'div.task-result-header', '返回结果为空');
                     } else {
                         var div = put(pane.domNode, 'div.task-result-header', '结果列表（前100条）');
                         put(div, 'a[href="' + config.contextPath + '/query-editor/api/task/excel/' + task.id + '"][target="_blank"]', '下载Excel');
-                    }
+                    }*/
 
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
                         columns: result.columns,
-                        className: 'dgrid-autoheight'
+                        className: 'grid-fill-container'
                     });
+
+                    if (result.hasMore) {
+                        var more = {};
+                        more[result.columns[0].label] = '...';
+                        console.log(more);
+                        result.rows.push(more);
+                    }
 
                     gridOutput.renderArray(result.rows);
 

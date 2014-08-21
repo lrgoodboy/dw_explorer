@@ -154,9 +154,11 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
         Map("label" -> label, "field" -> label, "sortable" -> false)
       }).toList
 
+      val limit = 100
+
       val rows = if (columns.nonEmpty) {
 
-        lines.take(100).map(line => {
+        lines.take(limit).map(line => {
           val cols = line.split("\t")
           val row = for (i <- cols.indices if i < columns.length) yield {
             (columns(i)("label").asInstanceOf[String], cols(i))
@@ -166,9 +168,11 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
       } else Nil
 
+      val hasMore = rows.size == limit && lines.hasNext
+
       val columnsWidth = if (rows.nonEmpty) calcColumnsWidth(columns, rows) else columns
 
-      Map("columns" -> columnsWidth, "rows" -> rows)
+      Map("columns" -> columnsWidth, "rows" -> rows, "hasMore" -> hasMore)
     }
 
   }
@@ -461,7 +465,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       case (p, v) =>
         result = result.replace("${" + p + "}", v)
     }
-    
+
     // replace udf path
     result = result.replace("/home/hadoop/dwetl/hiveudf/", Config("common", "udf.path"))
 

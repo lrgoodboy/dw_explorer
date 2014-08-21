@@ -235,7 +235,7 @@ define('explorer/queryEditor/taskStatus', [
         initWebSocket: function() {
             var self = this;
 
-            if (typeof WebSocket == 'undefined') {
+            if (!WebSocket) {
                 alert('您的浏览器不支持WebSocket，请更换。');
                 return;
             }

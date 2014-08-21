@@ -12,6 +12,8 @@ html, body {
 #topCol {
     font-size: 24px;
     font-weight: bold;
+    border: none;
+    padding: 0 10px;
 }
 
 #leftCol {
@@ -116,4 +118,22 @@ ul.option-list a {
 ul.option-list a:hover {
     color: black;
     text-decoration: underline;
+}
+
+.icon-play {
+    background-image: url('icon/play.png');
+    width: 16px;
+    height: 16px;
+}
+
+.icon-help {
+    background-image: url('icon/help.png');
+    width: 16px;
+    height: 16px;
+}
+
+.icon-forward {
+    background-image: url('icon/forward.png');
+    width: 16px;
+    height: 16px;
 }

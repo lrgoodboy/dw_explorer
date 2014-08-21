@@ -86,6 +86,35 @@ define('explorer/queryEditor', [
                     },
                 });
 
+                // editor commands
+                lang.mixin(CodeMirror.commands, {
+
+                    save: function(cm) {
+                        rest.put({
+                            id: cm.getOption('dw.doc.id'),
+                            content: cm.getValue()
+                        }).then(function() {
+                            self.showToaster('文档 ' + cm.getOption('dw.doc.name') + ' 保存成功');
+                        });
+                    },
+
+                    runSelected: function(cm) {
+                        taskStatus.submitTask(self.getOptions() + cm.getSelection());
+                    },
+
+                    runAll: function(cm) {
+                        taskStatus.submitTask(self.getOptions() + cm.getValue());
+                    }
+
+                });
+
+                lang.mixin(CodeMirror.defaults, {
+                    extraKeys: {
+                        'F5': 'runSelected',
+                        'F6': 'runAll'
+                    }
+                });
+
                 self.treeDoc = new Tree({
                     model: model,
                     onDblClick: function(item) {
@@ -124,25 +153,72 @@ define('explorer/queryEditor', [
 
                             var toolbar = new Toolbar();
 
-                            var btnSave = new Button({
+                            toolbar.addChild(new Button({
+                                title: '保存(Ctrl+S)',
                                 showLabel: false,
-                                iconClass: 'dijitEditorIcon dijitEditorIconSave'
-                            });
-                            toolbar.addChild(btnSave);
+                                iconClass: 'dijitEditorIcon dijitEditorIconSave',
+                                onClick: function() {
+                                    pane.codeMirror.execCommand('save');
+                                }
+                            }));
 
-                            var btnRunSelected = new Button({
+                            toolbar.addChild(new Button({
+                                title: '运行所选(Ctrl+R)',
                                 showLabel: false,
-                                iconClass: 'dijitEditorIcon dijitEditorIconCreateLink'
-                            });
-                            toolbar.addChild(btnRunSelected);
+                                iconClass: 'icon-play',
+                                onClick: function() {
+                                    pane.codeMirror.execCommand('runSelected');
+                                }
+                            }));
+
+                            toolbar.addChild(new Button({
+                                title: '运行全部(Ctrl+Shift+R)',
+                                showLabel: false,
+                                iconClass: 'icon-forward',
+                                onClick: function() {
+                                    pane.codeMirror.execCommand('runAll');
+                                }
+                            }));
 
                             toolbar.addChild(new ToolbarSeparator());
 
-                            var btnRunAll = new Button({
+                            toolbar.addChild(new Button({
+                                title: '撤销(Ctrl+Z)',
                                 showLabel: false,
-                                iconClass: 'dijitEditorIcon dijitEditorIconSelectAll'
-                            });
-                            toolbar.addChild(btnRunAll);
+                                iconClass: 'dijitEditorIcon dijitEditorIconUndo',
+                                onClick: function() {
+                                    pane.codeMirror.execCommand('undo');
+                                }
+                            }));
+
+                            toolbar.addChild(new Button({
+                                title: '恢复(Ctrl+Y)',
+                                showLabel: false,
+                                iconClass: 'dijitEditorIcon dijitEditorIconRedo',
+                                onClick: function() {
+                                    pane.codeMirror.execCommand('redo');
+                                }
+                            }))
+
+                            toolbar.addChild(new ToolbarSeparator());
+
+                            toolbar.addChild(new Button({
+                                title: '增加缩进(Ctrl+])',
+                                showLabel: false,
+                                iconClass: 'dijitEditorIcon dijitEditorIconIndent',
+                                onClick: function() {
+                                    pane.codeMirror.execCommand('indentMore');
+                                }
+                            }));
+
+                            toolbar.addChild(new Button({
+                                title: '减少缩进(Ctrl+[)',
+                                showLabel: false,
+                                iconClass: 'dijitEditorIcon dijitEditorIconOutdent',
+                                onClick: function() {
+                                    pane.codeMirror.execCommand('indentLess');
+                                }
+                            }));
 
                             toolbarPane.addChild(toolbar);
                             layout.addChild(toolbarPane);
@@ -159,50 +235,18 @@ define('explorer/queryEditor', [
                             central.selectChild(pane);
 
                             // editor
-                            var editor = CodeMirror(editorPane.domNode, {
+                            pane.codeMirror = CodeMirror(editorPane.domNode, {
                                 value: object.content,
                                 mode: 'text/x-hive',
                                 lineNumbers: true
                             });
 
-                            editor.on('change', function() {
+                            pane.codeMirror.on('change', function() {
                                 self.autoSave[item.id] = true;
                             });
 
-                            pane.codeMirror = editor;
-
-                            btnSave.on('click', function() {
-
-                                rest.put({
-                                    id: item.id,
-                                    content: editor.getValue()
-                                }).then(function() {
-                                    self.showToaster('文档 ' + object.name + ' 保存成功');
-                                });
-
-                            });
-
-                            var lastSubmit = new Date().getTime();
-                            function submitTask(queries) {
-
-                                btnRunSelected.set('disabled', true);
-                                btnRunAll.set('disabled', true);
-
-                                setTimeout(function() {
-                                    btnRunSelected.set('disabled', false);
-                                    btnRunAll.set('disabled', false);
-                                }, 1500);
-
-                                taskStatus.submitTask(queries);
-                            }
-
-                            btnRunSelected.on('click', function() {
-                                submitTask(self.getOptions() + editor.getSelection());
-                            });
-
-                            btnRunAll.on('click', function() {
-                                submitTask(self.getOptions() + editor.getValue());
-                            });
+                            pane.codeMirror.setOption('dw.doc.id', item.id);
+                            pane.codeMirror.setOption('dw.doc.name', object.name);
 
                         });
                     }
@@ -647,7 +691,7 @@ define('explorer/queryEditor', [
         saveOptions: function() {
             var self = this;
 
-            if (!window.localStorage) {
+            if (!localStorage) {
                 return;
             }
 
@@ -673,7 +717,7 @@ define('explorer/queryEditor', [
                 options.set.push(option);
             });
 
-            window.localStorage['dw.explorer.options'] = json.stringify(options);
+            localStorage['dw.explorer.options'] = json.stringify(options);
         },
 
         readOptions: function() {

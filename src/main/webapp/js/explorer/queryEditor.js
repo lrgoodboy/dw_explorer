@@ -198,17 +198,18 @@ define('explorer/queryEditor', [
                         content: cm.getValue()
                     }).then(function() {
                         self.showToaster('文档 ' + cm.getOption('docName') + ' 保存成功');
-                        delete self.autoSave[id];
+                        self.removeChangedDoc(id);
                     });
                 },
 
                 saveAll: function() {
 
-                    var autoSave = {};
+                    var docs = {};
                     array.forEach(registry.byId('central').getChildren(), function(pane) {
-                        autoSave[pane.get('docId')] = true;
+                        docs[pane.get('docId')] = true;
                     });
-                    self.autoSave = autoSave;
+
+                    self.changedDocs = docs;
                     self.saveAll();
 
                 },
@@ -245,7 +246,7 @@ define('explorer/queryEditor', [
             // check before unload
             on(window, 'beforeunload', function() {
 
-                var titles = array.map(self.getAutoSavePanes(), function(pane) {
+                var titles = array.map(self.getChangedPanes(), function(pane) {
                     return pane.get('docName');
                 });
 
@@ -255,13 +256,47 @@ define('explorer/queryEditor', [
             });
         },
 
-        getAutoSavePanes: function() {
+        changedDocs: {},
+
+        addChangedDoc: function(id) {
+            var self = this;
+
+            var pane = registry.byId('editorPane_' + id);
+            if (pane) {
+                pane.set('title', '*' + pane.get('docName'));
+            }
+
+            self.changedDocs[id] = true;
+        },
+
+        removeChangedDoc: function(id) {
+            var self = this;
+
+            var pane = registry.byId('editorPane_' + id);
+            if (pane) {
+                pane.set('title', pane.get('docName'));
+            }
+
+            delete self.changedDocs[id];
+        },
+
+        clearChangedDocs: function() {
+            var self = this;
+
+            array.forEach(self.getChangedPanes(), function(pane) {
+                pane.set('title', pane.get('docName'));
+            });
+
+            self.changedDocs = {};
+        },
+
+        getChangedPanes: function() {
             var self = this;
 
             var panes = [];
-            for (id in self.autoSave) {
+            for (id in self.changedDocs) {
 
-                if (!self.autoSave.hasOwnProperty(id)) {
+                if (!self.changedDocs.hasOwnProperty(id)) {
                     continue;
                 }
 
@@ -293,8 +328,12 @@ define('explorer/queryEditor', [
                     title: object.name,
                     closable: true,
                     onClose: function() {
-                        if (pane.get('docId') in self.autoSave) {
-                            return confirm('该文档尚未保存，确定要关闭吗？');
+                        var id = pane.get('docId');
+                        if (id in self.changedDocs) {
+                            if (!confirm('该文档尚未保存，确定要关闭吗？')) {
+                                return false;
+                            }
+                            self.removeChangedDoc(id);
                         }
                         return true;
                     }
@@ -365,7 +404,7 @@ define('explorer/queryEditor', [
                 });
 
                 editor.on('change', function() {
-                    self.autoSave[object.id] = true;
+                    self.addChangedDoc(object.id);
                 });
 
                 editor.setOption('docId', object.id);
@@ -375,13 +414,11 @@ define('explorer/queryEditor', [
             });
         },
 
-        autoSave: {},
-
         saveAll: function() {
             var self = this;
 
             var promises = [], titles = [];
-            array.forEach(self.getAutoSavePanes(), function(pane) {
+            array.forEach(self.getChangedPanes(), function(pane) {
                 promises.push(self.docRest.put({
                     id: pane.get('docId'),
                     content: pane.get('editor').getValue()
@@ -397,7 +434,7 @@ define('explorer/queryEditor', [
                 self.showToaster('以下文档已保存：<br>' + titles.join('<br>'));
             });
 
-            self.autoSave = {};
+            self.clearChangedDocs();
         },
 
         showToaster: function(content) {

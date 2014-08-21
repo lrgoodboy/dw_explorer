@@ -10,6 +10,8 @@ define('explorer/queryEditor', [
     'dojo/dom-attr',
     'dojo/on',
     'dojo/date/locale',
+    'dojo/promise/all',
+    'dojo/has',
     'dojo/request',
     'dojo/json',
     'dojo/store/Memory',
@@ -28,6 +30,7 @@ define('explorer/queryEditor', [
     'dijit/form/CheckBox',
     'dijit/form/NumberSpinner',
     'dijit/Toolbar',
+    'dijit/ToolbarSeparator',
     'dijit/Fieldset',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
@@ -38,9 +41,10 @@ define('explorer/queryEditor', [
     'cm/lib/codemirror',
     'cm/mode/sql/sql',
     'explorer/queryEditor/taskStatus'
-], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, on, date, request, json, Memory, JsonRest, Observable,
+], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, on, date, all, has,
+            request, json, Memory, JsonRest, Observable,
             registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button,
-            CheckBox, NumberSpinner, Toolbar, Fieldset,
+            CheckBox, NumberSpinner, Toolbar, ToolbarSeparator, Fieldset,
             Grid, OnDemandGrid, Selection, ColumnResizer, dgridUtil, put, CodeMirror, cmdModeSql, taskStatus) {
 
     var QueryEditor = declare(null, {
@@ -49,6 +53,7 @@ define('explorer/queryEditor', [
             var self = this;
             ready(function() {
                 self.initDocument();
+                self.initEditor();
                 self.initMetadata();
                 self.initOption();
             });
@@ -57,9 +62,11 @@ define('explorer/queryEditor', [
         initDocument: function() {
             var self = this;
 
+            // document tree
             var rest = JsonRest({
                 target: config.contextPath + '/query-editor/api/doc/',
             });
+            self.docRest = rest;
 
             rest.query().then(function(docs) {
 
@@ -86,96 +93,9 @@ define('explorer/queryEditor', [
                 self.treeDoc = new Tree({
                     model: model,
                     onDblClick: function(item) {
-
-                        if (item.isFolder) {
-                            return;
+                        if (!item.isFolder) {
+                            self.openDocument(item.id);
                         }
-
-                        var central = registry.byId('central');
-                        var paneId = 'editorPane_' + item.id;
-                        var pane = registry.byId(paneId);
-
-                        if (typeof pane != 'undefined') {
-                            central.selectChild(pane);
-                            return;
-                        }
-
-                        rest.get(item.id).then(function(object) {
-
-                            // http://dojotoolkit.org/reference-guide/1.10/dijit/layout.html
-                            // layout
-                            var pane = new ContentPane({
-                                id: paneId,
-                                title: object.name,
-                                closable: true
-                            });
-
-                            var layout = new LayoutContainer({
-                                style: 'width: 100%; height: 100%; border: 1px solid silver;'
-                            });
-
-                            var toolbarPane = new ContentPane({
-                                region: 'top',
-                                style: 'padding: 0;'
-                            });
-
-                            var toolbar = new Toolbar();
-
-                            var btnSave = new Button({
-                                label: 'Save'
-                            });
-                            toolbar.addChild(btnSave);
-
-                            var btnRunSelected = new Button({
-                                label: 'Run Selected'
-                            });
-                            toolbar.addChild(btnRunSelected);
-
-                            var btnRunAll = new Button({
-                                label: 'Run All'
-                            });
-                            toolbar.addChild(btnRunAll);
-
-                            toolbarPane.addChild(toolbar);
-                            layout.addChild(toolbarPane);
-
-                            var editorPane = new ContentPane({
-                                region: 'center',
-                                style: 'height: 100%; padding: 0;'
-                            });
-
-                            layout.addChild(editorPane);
-                            pane.addChild(layout);
-
-                            central.addChild(pane);
-                            central.selectChild(pane);
-
-                            // editor
-                            var editor = CodeMirror(editorPane.domNode, {
-                                value: object.content,
-                                mode: 'text/x-hive'
-                            });
-
-                            pane.codeMirror = editor;
-
-                            btnSave.on('click', function() {
-
-                                rest.put({
-                                    id: item.id,
-                                    content: editor.getValue()
-                                });
-
-                            });
-
-                            btnRunSelected.on('click', function() {
-                                taskStatus.submitTask(self.getOptions() + editor.getSelection());
-                            });
-
-                            btnRunAll.on('click', function() {
-                                taskStatus.submitTask(self.getOptions() + editor.getValue());
-                            });
-
-                        });
                     }
                 }, 'treeDoc');
 
@@ -260,9 +180,267 @@ define('explorer/queryEditor', [
                     }
                 }));
 
-
                 self.treeDoc.startup();
             });
+
+        },
+
+        initEditor: function() {
+            var self = this;
+
+            // commands
+            lang.mixin(CodeMirror.commands, {
+
+                save: function(cm) {
+                    var id = cm.getOption('docId');
+                    self.docRest.put({
+                        id: id,
+                        content: cm.getValue()
+                    }).then(function() {
+                        self.showToaster('文档 ' + cm.getOption('docName') + ' 保存成功');
+                        self.removeChangedDoc(id);
+                    });
+                },
+
+                saveAll: function() {
+
+                    var docs = {};
+                    array.forEach(registry.byId('central').getChildren(), function(pane) {
+                        docs[pane.get('docId')] = true;
+                    });
+
+                    self.changedDocs = docs;
+                    self.saveAll();
+
+                },
+
+                runSelected: function(cm) {
+                    taskStatus.submitTask(self.getOptions() + cm.getSelection());
+                },
+
+                runAll: function(cm) {
+                    taskStatus.submitTask(self.getOptions() + cm.getValue());
+                }
+
+            });
+
+            // keyboard shortcut
+            lang.mixin(CodeMirror.defaults, {
+                extraKeys: {
+                    'F5': 'runSelected',
+                    'F6': 'runAll'
+                }
+            });
+
+            if (has('mac')) {
+                CodeMirror.defaults.extraKeys['Shift-Cmd-S'] = 'saveAll';
+            } else {
+                CodeMirror.defaults.extraKeys['Shift-Ctrl-S'] = 'saveAll';
+            }
+
+            // auto save task
+            setInterval(function() {
+                self.saveAll();
+            }, 30000);
+
+            // check before unload
+            on(window, 'beforeunload', function() {
+
+                var titles = array.map(self.getChangedPanes(), function(pane) {
+                    return pane.get('docName');
+                });
+
+                if (titles.length > 0) {
+                    return '以下文档尚未保存：\n' + titles.join('\n') + '\n确定要关闭页面吗？';
+                }
+            });
+        },
+
+        changedDocs: {},
+
+        addChangedDoc: function(id) {
+            var self = this;
+
+            var pane = registry.byId('editorPane_' + id);
+            if (pane) {
+                pane.set('title', '*' + pane.get('docName'));
+            }
+
+            self.changedDocs[id] = true;
+        },
+
+        removeChangedDoc: function(id) {
+            var self = this;
+
+            var pane = registry.byId('editorPane_' + id);
+            if (pane) {
+                pane.set('title', pane.get('docName'));
+            }
+
+            delete self.changedDocs[id];
+        },
+
+        clearChangedDocs: function() {
+            var self = this;
+
+            array.forEach(self.getChangedPanes(), function(pane) {
+                pane.set('title', pane.get('docName'));
+            });
+
+            self.changedDocs = {};
+        },
+
+        getChangedPanes: function() {
+            var self = this;
+
+            var panes = [];
+            for (id in self.changedDocs) {
+
+                if (!self.changedDocs.hasOwnProperty(id)) {
+                    continue;
+                }
+
+                var pane = registry.byId('editorPane_' + id);
+                if (pane) {
+                    panes.push(pane);
+                }
+            }
+
+            return panes;
+        },
+
+        openDocument: function(id) {
+            var self = this;
+
+            var central = registry.byId('central');
+            var paneId = 'editorPane_' + id;
+            var pane = registry.byId(paneId);
+
+            if (pane) {
+                central.selectChild(pane);
+                return;
+            }
+
+            self.docRest.get(id).then(function(object) {
+
+                var pane = new ContentPane({
+                    id: paneId,
+                    title: object.name,
+                    closable: true,
+                    onClose: function() {
+                        var id = pane.get('docId');
+                        if (id in self.changedDocs) {
+                            if (!confirm('该文档尚未保存，确定要关闭吗？')) {
+                                return false;
+                            }
+                            self.removeChangedDoc(id);
+                        }
+                        return true;
+                    }
+                });
+
+                pane.set('docId', object.id);
+                pane.set('docName', object.name);
+
+                // layout
+                var layout = new LayoutContainer({
+                    style: 'width: 100%; height: 100%; border: 1px solid silver;'
+                });
+
+                var toolbarPane = new ContentPane({
+                    region: 'top',
+                    style: 'padding: 0;'
+                });
+
+                var toolbar = new Toolbar();
+
+                function addButton(title, iconClass, command) {
+
+                    if (title == '|') {
+                        toolbar.addChild(new ToolbarSeparator());
+                        return;
+                    }
+
+                    toolbar.addChild(new Button({
+                        title: title,
+                        showLabel: false,
+                        iconClass: iconClass,
+                        onClick: function() {
+                            pane.get('editor').execCommand(command);
+                        }
+                    }));
+                }
+
+                addButton('保存(Ctrl+S)', 'icon-save', 'save');
+                addButton('保存全部(Ctrl+Shift+S)', 'icon-save-all', 'saveAll');
+                addButton('运行所选(F5)', 'icon-play', 'runSelected');
+                addButton('运行全部(F6)', 'icon-run-all', 'runAll');
+                addButton('|');
+                addButton('撤销(Ctrl+Z)', 'dijitEditorIcon dijitEditorIconUndo', 'undo');
+                addButton('恢复(Ctrl+Y)', 'dijitEditorIcon dijitEditorIconRedo', 'redo');
+                addButton('|');
+                addButton('增加缩进(Ctrl+])', 'dijitEditorIcon dijitEditorIconIndent', 'indentMore');
+                addButton('减少缩进(Ctrl+[)', 'dijitEditorIcon dijitEditorIconOutdent', 'indentLess');
+
+                toolbarPane.addChild(toolbar);
+                layout.addChild(toolbarPane);
+
+                var editorPane = new ContentPane({
+                    region: 'center',
+                    style: 'height: 100%; padding: 0;'
+                });
+
+                layout.addChild(editorPane);
+                pane.addChild(layout);
+
+                central.addChild(pane);
+                central.selectChild(pane);
+
+                // editor
+                var editor = CodeMirror(editorPane.domNode, {
+                    value: object.content,
+                    mode: 'text/x-hive',
+                    lineNumbers: true
+                });
+
+                editor.on('change', function() {
+                    self.addChangedDoc(object.id);
+                });
+
+                editor.setOption('docId', object.id);
+                editor.setOption('docName', object.name);
+
+                pane.set('editor', editor);
+            });
+        },
+
+        saveAll: function() {
+            var self = this;
+
+            var promises = [], titles = [];
+            array.forEach(self.getChangedPanes(), function(pane) {
+                promises.push(self.docRest.put({
+                    id: pane.get('docId'),
+                    content: pane.get('editor').getValue()
+                }));
+                titles.push(pane.get('docName'));
+            });
+
+            if (promises.length == 0) {
+                return;
+            }
+
+            all(promises).then(function() {
+                self.showToaster('以下文档已保存：<br>' + titles.join('<br>'));
+            });
+
+            self.clearChangedDocs();
+        },
+
+        showToaster: function(content) {
+            var toaster = registry.byId('toaster');
+            toaster.setContent(content);
+            toaster.show();
         },
 
         initMetadata: function() {
@@ -568,7 +746,7 @@ define('explorer/queryEditor', [
         saveOptions: function() {
             var self = this;
 
-            if (!window.localStorage) {
+            if (!localStorage) {
                 return;
             }
 
@@ -594,7 +772,7 @@ define('explorer/queryEditor', [
                 options.set.push(option);
             });
 
-            window.localStorage['dw.explorer.options'] = json.stringify(options);
+            localStorage['dw.explorer.options'] = json.stringify(options);
         },
 
         readOptions: function() {
@@ -640,7 +818,7 @@ define('explorer/queryEditor', [
                 return;
             }
 
-            var editor = pane.codeMirror;
+            var editor = pane.get('editor');
             editor.replaceRange(content, editor.getCursor());
         },
 

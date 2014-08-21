@@ -12,6 +12,8 @@ html, body {
 #topCol {
     font-size: 24px;
     font-weight: bold;
+    border: none;
+    padding: 0 10px;
 }
 
 #leftCol {

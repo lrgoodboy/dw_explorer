@@ -45,7 +45,7 @@ define('explorer/queryEditor/taskStatus', [
             // grid
             var CustomGrid = declare([OnDemandGrid, Selection]);
             self.grid = new CustomGrid({
-                className: 'dgrid-autoheight grid-task-status',
+                className: 'grid-task-status grid-task-status-main',
                 sort: [{attribute: 'id', descending: true}],
                 store: self.taskStore,
                 columns: [

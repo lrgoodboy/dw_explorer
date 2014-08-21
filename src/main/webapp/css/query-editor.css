@@ -24,10 +24,6 @@ html, body {
     height: 200px;
 }
 
-.dgrid-grid {
-    margin-bottom: 10px;
-}
-
 .grid-task-status .field-id {
     width: 80px;
 }
@@ -54,10 +50,20 @@ html, body {
     display: none;
 }
 
+.grid-task-status-main {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    margin: 8px;
+}
+
 .task-result-header {
     font-weight: bold;
     font-size: 15px;
-    margin-bottom: 10px;
+    margin: 10px 0;
 }
 
 .task-result-header a {

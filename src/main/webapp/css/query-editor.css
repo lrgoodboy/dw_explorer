@@ -1,3 +1,5 @@
+@import 'icon.css';
+
 html, body {
     height: 100%;
     margin: 0;
@@ -118,22 +120,4 @@ ul.option-list a {
 ul.option-list a:hover {
     color: black;
     text-decoration: underline;
-}
-
-.icon-play {
-    background-image: url('icon/play.png');
-    width: 16px;
-    height: 16px;
-}
-
-.icon-help {
-    background-image: url('icon/help.png');
-    width: 16px;
-    height: 16px;
-}
-
-.icon-forward {
-    background-image: url('icon/forward.png');
-    width: 16px;
-    height: 16px;
 }

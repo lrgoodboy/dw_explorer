@@ -1,0 +1,29 @@
+.icon-save {
+    background-image: url('icon/save.png');
+    width: 16px;
+    height: 16px;
+}
+
+.icon-save-all {
+    background-image: url('icon/save-all.png');
+    width: 16px;
+    height: 16px;
+}
+
+.icon-play {
+    background-image: url('icon/play.png');
+    width: 16px;
+    height: 16px;
+}
+
+.icon-help {
+    background-image: url('icon/help.png');
+    width: 16px;
+    height: 16px;
+}
+
+.icon-run-all {
+    background-image: url('icon/run-all.png');
+    width: 16px;
+    height: 16px;
+}

@@ -294,7 +294,7 @@ define('explorer/queryEditor', [
             var self = this;
 
             var panes = [];
-            for (id in self.changedDocs) {
+            for (var id in self.changedDocs) {
 
                 if (!self.changedDocs.hasOwnProperty(id)) {
                     continue;

@@ -42,9 +42,7 @@
   <div id="central" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'center'"></div>
 
   <div id="bottomCol" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'bottom', splitter: true, layoutPriority: 1">
-    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '任务状态'" id="paneTaskStatus">
-      <div id="gridTaskStatus"></div>
-    </div>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: '任务状态'" id="paneTaskStatus"></div>
   </div>
 
 </div>

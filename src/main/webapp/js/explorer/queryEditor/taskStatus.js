@@ -34,6 +34,38 @@ define('explorer/queryEditor/taskStatus', [
             });
         },
 
+        createTaskStatusGrid: function(CustomGrid, options) {
+            var self = this;
+
+            var grid = new CustomGrid(lang.mixin({
+                className: 'grid-task-status',
+                columns: [
+                    {label: 'ID', field: 'id', sortable: false},
+                    {label: '查询语句', field: 'queriesBrief', sortable: false},
+                    {label: '创建时间', field: 'created', sortable: false},
+                    {label: '状态', field: 'status', sortable: false},
+                    {label: '运行时间', field: 'duration', sortable: false}
+                ],
+                renderRow: function(object, options) {
+                    var div = put('div.collapsed', CustomGrid.prototype.renderRow.apply(this, arguments)),
+                        expando = put(div, 'div.expando', {innerHTML: object.queries.replace(/\n/g, '<br>')});
+                    return div;
+                }
+            }, options));
+
+            // https://github.com/SitePen/dgrid/blob/v0.3.15/demos/multiview/multiview.js
+            var expandedNode;
+            grid.on('.dgrid-row:click', function(evt) {
+                var node = grid.row(evt).element,
+                    collapsed = node.className.indexOf('collapsed') >= 0;
+                put(node, (collapsed ? '!' : '.') + 'collapsed');
+                collapsed && expandedNode && put(expandedNode, '.collapsed');
+                expandedNode = collapsed ? node : null;
+            });
+
+            return grid;
+        },
+
         initGrid: function() {
             var self = this;
 
@@ -43,46 +75,22 @@ define('explorer/queryEditor/taskStatus', [
             }));
 
             // grid
-            var CustomGrid = declare([OnDemandGrid, Selection]);
-            self.grid = new CustomGrid({
+            self.grid = self.createTaskStatusGrid(declare([OnDemandGrid, Selection]), {
                 className: 'grid-task-status grid-fill-container',
                 sort: [{attribute: 'id', descending: true}],
                 store: self.taskStore,
-                columns: [
-                    {label: 'ID', field: 'id', sortable: false},
-                    {label: '查询语句', field: 'queriesBrief', sortable: false},
-                    {label: '创建时间', field: 'created', sortable: false},
-                    {label: '状态', field: 'status', sortable: false},
-                    {label: '运行时间', field: 'duration', sortable: false}
-                ],
-                selectionMode: 'single',
-                renderRow: function(object, options) {
-                    var div = put('div.collapsed', CustomGrid.prototype.renderRow.apply(this, arguments)),
-                        expando = put(div, 'div.expando', {innerHTML: object.queries.replace(/\n/g, '<br>')});
-                    return div;
-                }
-            }, 'gridTaskStatus');
-
-            // https://github.com/SitePen/dgrid/blob/v0.3.15/demos/multiview/multiview.js
-            var expandedNode;
-            self.grid.on('.dgrid-row:click', function(evt) {
-                var node = self.grid.row(evt).element,
-                    collapsed = node.className.indexOf('collapsed') >= 0;
-                put(node, (collapsed ? '!' : '.') + 'collapsed');
-                collapsed && expandedNode && put(expandedNode, '.collapsed');
-                expandedNode = collapsed ? node : null;
+                selectionMode: 'single'
             });
+            registry.byId('paneTaskStatus').addChild(self.grid);
 
             // context menu
             function getSelectedTask() {
-                var task = null;
                 for (var id in self.grid.selection) {
-                    if (self.grid.selection[id]) {
-                        task = self.grid.row(id).data;
-                        break;
+                    if (self.grid.selection.hasOwnProperty(id)) {
+                        return self.grid.row(id).data;
                     }
                 }
-                return task;
+                return null;
             }
 
             var menu = new Menu({
@@ -91,14 +99,19 @@ define('explorer/queryEditor/taskStatus', [
             menu.addChild(new MenuItem({
                 label: '查看结果',
                 onClick: function() {
-                    self.showResult(getSelectedTask());
+                    var task = getSelectedTask();
+                    if (task) {
+                        self.showResult(task);
+                    }
                 }
             }));
             menu.addChild(new MenuItem({
                 label: '取消任务',
                 onClick: function() {
                     var task = getSelectedTask();
-                    request(config.contextPath + '/query-editor/api/task/cancel/' + task.id);
+                    if (task) {
+                        request(config.contextPath + '/query-editor/api/task/cancel/' + task.id);
+                    }
                 }
             }));
             /*menu.addChild(new MenuItem({
@@ -128,37 +141,17 @@ define('explorer/queryEditor/taskStatus', [
                 closable: true
             });
 
-            /*var gridStatus = new Grid({
-                className: 'dgrid-autoheight grid-task-status',
-                columns: [
-                    {label: 'ID', field: 'id', sortable: false},
-                    {label: '查询语句', field: 'queriesBrief', sortable: false},
-                    {label: '创建时间', field: 'created', sortable: false},
-                    {label: '状态', field: 'status', sortable: false},
-                    {label: '运行时间', field: 'duration', sortable: false}
-                ],
-                renderRow: function(object, options) {
-                    var div = put('div.collapsed', Grid.prototype.renderRow.apply(this, arguments)),
-                        expando = put(div, 'div.expando', {innerHTML: object.queries.replace(/\n/g, '<br>')});
-                    return div;
-                }
-            });
-
-            gridStatus.on('.dgrid-row:click', function(evt) {
-                var node = gridStatus.row(evt).element,
-                    collapsed = node.className.indexOf('collapsed') >= 0;
-                put(node, (collapsed ? '!' : '.') + 'collapsed');
-            });
-
-            gridStatus.renderArray([task]);
-
-            pane.addChild(gridStatus);*/
-
             var bottomCol = registry.byId('bottomCol');
             bottomCol.addChild(pane);
             bottomCol.selectChild(pane);
 
             if (showError) {
+
+                var gridStatus = self.createTaskStatusGrid(Grid, {
+                    className: 'grid-task-status dgrid-autoheight'
+                });
+                pane.addChild(gridStatus);
+                gridStatus.renderArray([task]);
 
                 request(config.contextPath + '/query-editor/api/task/error/' + task.id).then(function(data) {
                     put(pane.domNode, 'div.task-result-header', '错误日志');
@@ -187,17 +180,41 @@ define('explorer/queryEditor/taskStatus', [
                         columns: result.columns,
                         className: 'grid-fill-container'
                     });
+                    pane.addChild(gridOutput);
 
+                    // rows
                     if (result.hasMore) {
                         var more = {};
                         more[result.columns[0].label] = '...';
-                        console.log(more);
                         result.rows.push(more);
                     }
 
                     gridOutput.renderArray(result.rows);
 
-                    pane.addChild(gridOutput);
+                    // context menu
+                    var menu = new Menu({
+                        targetNodeIds: [gridOutput.domNode]
+                    });
+                    menu.addChild(new MenuItem({
+                        label: '任务信息',
+                        onClick: function() {
+                        }
+                    }));
+                    menu.addChild(new MenuItem({
+                        label: '新窗口打开',
+                        onClick: function() {
+                        }
+                    }));
+                    menu.addChild(new MenuItem({
+                        label: '复制到剪贴板',
+                        onClick: function() {
+                        }
+                    }));
+                    menu.addChild(new MenuItem({
+                        label: '下载Excel',
+                        onClick: function() {
+                        }
+                    }));
                 });
 
             }

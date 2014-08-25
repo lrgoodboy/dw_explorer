@@ -24,24 +24,20 @@ html, body {
     height: 200px;
 }
 
-.dgrid-grid {
-    margin-bottom: 10px;
-}
-
 .grid-task-status .field-id {
-    width: 80px;
+    width: 60px;
 }
 
 .grid-task-status .field-created {
-    width: 180px;
+    width: 150px;
 }
 
 .grid-task-status .field-status {
-    width: 100px;
+    width: 80px;
 }
 
 .grid-task-status .field-duration {
-    width: 100px;
+    width: 80px;
 }
 
 .grid-task-status .expando {
@@ -54,10 +50,24 @@ html, body {
     display: none;
 }
 
+.grid-fill-container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    margin: 8px;
+}
+
+.grid-table-info {
+    margin-bottom: 10px;
+ }
+
 .task-result-header {
     font-weight: bold;
     font-size: 15px;
-    margin-bottom: 10px;
+    margin: 10px 0;
 }
 
 .task-result-header a {
@@ -118,4 +128,23 @@ ul.option-list a {
 ul.option-list a:hover {
     color: black;
     text-decoration: underline;
+}
+
+#dlgTaskInfo table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#dlgTaskInfo th, #dlgTaskInfo td {
+    padding: 5px;
+    border: 1px solid silver;
+}
+
+#dlgTaskInfo th {
+    width: 80px;
+    background-color: #eee;
+}
+
+#dlgTaskInfo td {
+    word-break: break-all;
 }

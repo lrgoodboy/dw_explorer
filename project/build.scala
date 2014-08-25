@@ -44,7 +44,8 @@ object DwExplorerBuild extends Build {
         "commons-configuration" % "commons-configuration" % "1.10",
         "org.webjars" % "codemirror" % "4.2",
         "org.eclipse.jetty" % "jetty-websocket" % JettyVersion % "container;compile",
-        "com.typesafe.akka" %% "akka-remote" % "2.1.2"
+        "com.typesafe.akka" %% "akka-remote" % "2.1.2",
+        "org.webjars" % "zeroclipboard" % "2.1.5"
       ),
       scalateTemplateConfig in Compile <<= (sourceDirectory in Compile){ base =>
         Seq(

@@ -7,6 +7,8 @@ define('explorer/queryEditor/taskStatus', [
     'dojo/request',
     'dojo/json',
     'dojo/cookie',
+    'dojo/query',
+    'dojo/html',
     'dojo/store/Memory',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
@@ -14,15 +16,17 @@ define('explorer/queryEditor/taskStatus', [
     'dijit/layout/ContentPane',
     'dijit/Menu',
     'dijit/MenuItem',
+    'dijit/Dialog',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
-    'put-selector/put'
-], function(declare, lang, config, array, ready, request, json, cookie, Memory, JsonRest, Observable,
-            registry, ContentPane, Menu, MenuItem,
+    'put-selector/put',
+    'zc/ZeroClipboard'
+], function(declare, lang, config, array, ready, request, json, cookie, query, html, Memory, JsonRest, Observable,
+            registry, ContentPane, Menu, MenuItem, Dialog,
             Grid, OnDemandGrid, Selection, ColumnResizer,
-            put) {
+            put, ZeroClipboard) {
 
     var TaskStatus = declare(null, {
 
@@ -34,6 +38,38 @@ define('explorer/queryEditor/taskStatus', [
             });
         },
 
+        createTaskStatusGrid: function(CustomGrid, options) {
+            var self = this;
+
+            var grid = new CustomGrid(lang.mixin({
+                className: 'grid-task-status',
+                columns: [
+                    {label: 'ID', field: 'id', sortable: false},
+                    {label: '查询语句', field: 'queriesBrief', sortable: false},
+                    {label: '创建时间', field: 'created', sortable: false},
+                    {label: '状态', field: 'status', sortable: false},
+                    {label: '运行时间', field: 'duration', sortable: false}
+                ],
+                renderRow: function(object, options) {
+                    var div = put('div.collapsed', CustomGrid.prototype.renderRow.apply(this, arguments)),
+                        expando = put(div, 'div.expando', {innerHTML: object.queries.replace(/\n/g, '<br>')});
+                    return div;
+                }
+            }, options));
+
+            // https://github.com/SitePen/dgrid/blob/v0.3.15/demos/multiview/multiview.js
+            var expandedNode;
+            grid.on('.dgrid-row:click', function(evt) {
+                var node = grid.row(evt).element,
+                    collapsed = node.className.indexOf('collapsed') >= 0;
+                put(node, (collapsed ? '!' : '.') + 'collapsed');
+                collapsed && expandedNode && put(expandedNode, '.collapsed');
+                expandedNode = collapsed ? node : null;
+            });
+
+            return grid;
+        },
+
         initGrid: function() {
             var self = this;
 
@@ -43,46 +79,22 @@ define('explorer/queryEditor/taskStatus', [
             }));
 
             // grid
-            var CustomGrid = declare([OnDemandGrid, Selection]);
-            self.grid = new CustomGrid({
-                className: 'dgrid-autoheight grid-task-status',
+            self.grid = self.createTaskStatusGrid(declare([OnDemandGrid, Selection]), {
+                className: 'grid-task-status grid-fill-container',
                 sort: [{attribute: 'id', descending: true}],
                 store: self.taskStore,
-                columns: [
-                    {label: 'ID', field: 'id', sortable: false},
-                    {label: '查询语句', field: 'queriesBrief', sortable: false},
-                    {label: '创建时间', field: 'created', sortable: false},
-                    {label: '状态', field: 'status', sortable: false},
-                    {label: '运行时间', field: 'duration', sortable: false}
-                ],
-                selectionMode: 'single',
-                renderRow: function(object, options) {
-                    var div = put('div.collapsed', CustomGrid.prototype.renderRow.apply(this, arguments)),
-                        expando = put(div, 'div.expando', {innerHTML: object.queries.replace(/\n/g, '<br>')});
-                    return div;
-                }
-            }, 'gridTaskStatus');
-
-            // https://github.com/SitePen/dgrid/blob/v0.3.15/demos/multiview/multiview.js
-            var expandedNode;
-            self.grid.on('.dgrid-row:click', function(evt) {
-                var node = self.grid.row(evt).element,
-                    collapsed = node.className.indexOf('collapsed') >= 0;
-                put(node, (collapsed ? '!' : '.') + 'collapsed');
-                collapsed && expandedNode && put(expandedNode, '.collapsed');
-                expandedNode = collapsed ? node : null;
+                selectionMode: 'single'
             });
+            registry.byId('paneTaskStatus').addChild(self.grid);
 
             // context menu
             function getSelectedTask() {
-                var task = null;
                 for (var id in self.grid.selection) {
-                    if (self.grid.selection[id]) {
-                        task = self.grid.row(id).data;
-                        break;
+                    if (self.grid.selection.hasOwnProperty(id)) {
+                        return self.grid.row(id).data;
                     }
                 }
-                return task;
+                return null;
             }
 
             var menu = new Menu({
@@ -91,14 +103,19 @@ define('explorer/queryEditor/taskStatus', [
             menu.addChild(new MenuItem({
                 label: '查看结果',
                 onClick: function() {
-                    self.showResult(getSelectedTask());
+                    var task = getSelectedTask();
+                    if (task) {
+                        self.showResult(task);
+                    }
                 }
             }));
             menu.addChild(new MenuItem({
                 label: '取消任务',
                 onClick: function() {
                     var task = getSelectedTask();
-                    request(config.contextPath + '/query-editor/api/task/cancel/' + task.id);
+                    if (task) {
+                        request(config.contextPath + '/query-editor/api/task/cancel/' + task.id);
+                    }
                 }
             }));
             /*menu.addChild(new MenuItem({
@@ -128,37 +145,17 @@ define('explorer/queryEditor/taskStatus', [
                 closable: true
             });
 
-            var gridStatus = new Grid({
-                className: 'dgrid-autoheight grid-task-status',
-                columns: [
-                    {label: 'ID', field: 'id', sortable: false},
-                    {label: '查询语句', field: 'queriesBrief', sortable: false},
-                    {label: '创建时间', field: 'created', sortable: false},
-                    {label: '状态', field: 'status', sortable: false},
-                    {label: '运行时间', field: 'duration', sortable: false}
-                ],
-                renderRow: function(object, options) {
-                    var div = put('div.collapsed', Grid.prototype.renderRow.apply(this, arguments)),
-                        expando = put(div, 'div.expando', {innerHTML: object.queries.replace(/\n/g, '<br>')});
-                    return div;
-                }
-            });
-
-            gridStatus.on('.dgrid-row:click', function(evt) {
-                var node = gridStatus.row(evt).element,
-                    collapsed = node.className.indexOf('collapsed') >= 0;
-                put(node, (collapsed ? '!' : '.') + 'collapsed');
-            });
-
-            gridStatus.renderArray([task]);
-
-            pane.addChild(gridStatus);
-
             var bottomCol = registry.byId('bottomCol');
             bottomCol.addChild(pane);
             bottomCol.selectChild(pane);
 
             if (showError) {
+
+                var gridStatus = self.createTaskStatusGrid(Grid, {
+                    className: 'grid-task-status dgrid-autoheight'
+                });
+                pane.addChild(gridStatus);
+                gridStatus.renderArray([task]);
 
                 request(config.contextPath + '/query-editor/api/task/error/' + task.id).then(function(data) {
                     put(pane.domNode, 'div.task-result-header', '错误日志');
@@ -176,21 +173,86 @@ define('explorer/queryEditor/taskStatus', [
                         return;
                     }
 
-                    if (result.rows.length == 0) {
-                        put(pane.domNode, 'div.task-result-header', '返回结果为空');
-                    } else {
-                        var div = put(pane.domNode, 'div.task-result-header', '结果列表（前100条）');
-                        put(div, 'a[href="' + config.contextPath + '/query-editor/api/task/excel/' + task.id + '"][target="_blank"]', '下载Excel');
-                    }
-
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
                         columns: result.columns,
-                        className: 'dgrid-autoheight'
+                        className: 'grid-fill-container'
+                    });
+                    pane.addChild(gridOutput);
+
+                    // rows
+                    var limit = 100;
+                    var rows = result.rows;
+                    if (rows.length > limit) {
+                        rows = rows.slice(0, limit);
+                        var more = {};
+                        more[result.columns[0].label] = '...';
+                        rows.push(more);
+                    }
+
+                    gridOutput.renderArray(rows);
+
+                    // context menu
+                    var menu = new Menu({
+                        targetNodeIds: [gridOutput.domNode]
+                    });
+                    menu.addChild(new MenuItem({
+                        label: '任务信息',
+                        onClick: function() {
+                            var dlg = registry.byId('dlgTaskInfo');
+                            dlg.set('title', '任务信息[' + task.id + ']');
+
+                            var tds = query('td', dlg.domNode);
+                            html.set(tds[0], task.created);
+                            html.set(tds[1], task.duration);
+                            html.set(tds[2], task.queries.replace(/\n/g, '<br>'));
+
+                            dlg.show();
+                        }
+                    }));
+                    menu.addChild(new MenuItem({
+                        label: '新窗口打开',
+                        onClick: function() {
+                            var url = config.contextPath + '/query-editor/task/result/' + task.id;
+                            open(url);
+                        }
+                    }));
+                    var clipboardMenu = new MenuItem({
+                        label: '复制到剪贴板'
+                    });
+                    menu.addChild(clipboardMenu);
+                    menu.addChild(new MenuItem({
+                        label: '下载Excel',
+                        onClick: function() {
+                            var url = config.contextPath + '/query-editor/api/task/excel/' + task.id;
+                            open(url);
+                        }
+                    }));
+
+                    var clipboard = new ZeroClipboard(clipboardMenu.domNode);
+                    clipboard.on('copy', function(event) {
+
+                        var lines = [];
+
+                        var columns = array.map(result.columns, function(column) {
+                            return column.label;
+                        }).join('\t');
+                        lines.push(columns);
+
+                        array.forEach(result.rows, function(row) {
+                            lines.push(array.map(result.columns, function(column) {
+                                return row[column.label];
+                            }).join('\t'));
+                        });
+
+                        event.clipboardData.setData('text/plain', lines.join('\n'));
+
+                        if (result.hasMore) {
+                            self.showToaster('已复制前1000行，更多数据请下载Excel。')
+                        } else {
+                            self.showToaster('查询结果已全部复制到剪贴板。');
+                        }
                     });
 
-                    gridOutput.renderArray(result.rows);
-
-                    pane.addChild(gridOutput);
                 });
 
             }
@@ -277,6 +339,12 @@ define('explorer/queryEditor/taskStatus', [
                     self.initWebSocket();
                 }, 3000);
             };
+        },
+
+        showToaster: function(content) {
+            var toaster = registry.byId('toaster');
+            toaster.setContent(content);
+            toaster.show();
         },
 
         _theEnd: undefined

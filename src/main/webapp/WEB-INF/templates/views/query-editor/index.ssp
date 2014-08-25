@@ -75,6 +75,7 @@ var dojoConfig = {
         {name: 'xstyle', location: '${uri("/js/xstyle-0.1.3")}'},
         {name: 'dgrid', location: '${uri("/webjars/dgrid/0.3.14")}'},
         {name: 'cm', location: '${uri("/webjars/codemirror/4.2")}'},
+        {name: 'zc', location: '${uri("/webjars/zeroclipboard/2.1.5")}'},
         {name: 'explorer', location: '${uri("/js/explorer")}'}
     ],
     cacheBust: '${version}',

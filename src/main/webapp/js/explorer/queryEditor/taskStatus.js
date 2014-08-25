@@ -21,11 +21,12 @@ define('explorer/queryEditor/taskStatus', [
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
-    'put-selector/put'
+    'put-selector/put',
+    'zc/ZeroClipboard'
 ], function(declare, lang, config, array, ready, request, json, cookie, query, html, Memory, JsonRest, Observable,
             registry, ContentPane, Menu, MenuItem, Dialog,
             Grid, OnDemandGrid, Selection, ColumnResizer,
-            put) {
+            put, ZeroClipboard) {
 
     var TaskStatus = declare(null, {
 
@@ -179,13 +180,16 @@ define('explorer/queryEditor/taskStatus', [
                     pane.addChild(gridOutput);
 
                     // rows
-                    if (result.hasMore) {
+                    var limit = 100;
+                    var rows = result.rows;
+                    if (rows.length > limit) {
+                        rows = rows.slice(0, limit);
                         var more = {};
                         more[result.columns[0].label] = '...';
-                        result.rows.push(more);
+                        rows.push(more);
                     }
 
-                    gridOutput.renderArray(result.rows);
+                    gridOutput.renderArray(rows);
 
                     // context menu
                     var menu = new Menu({
@@ -212,11 +216,10 @@ define('explorer/queryEditor/taskStatus', [
                             open(url);
                         }
                     }));
-                    menu.addChild(new MenuItem({
-                        label: '复制到剪贴板',
-                        onClick: function() {
-                        }
-                    }));
+                    var clipboardMenu = new MenuItem({
+                        label: '复制到剪贴板'
+                    });
+                    menu.addChild(clipboardMenu);
                     menu.addChild(new MenuItem({
                         label: '下载Excel',
                         onClick: function() {
@@ -224,6 +227,32 @@ define('explorer/queryEditor/taskStatus', [
                             open(url);
                         }
                     }));
+
+                    var clipboard = new ZeroClipboard(clipboardMenu.domNode);
+                    clipboard.on('copy', function(event) {
+
+                        var lines = [];
+
+                        var columns = array.map(result.columns, function(column) {
+                            return column.label;
+                        }).join('\t');
+                        lines.push(columns);
+
+                        array.forEach(result.rows, function(row) {
+                            lines.push(array.map(result.columns, function(column) {
+                                return row[column.label];
+                            }).join('\t'));
+                        });
+
+                        event.clipboardData.setData('text/plain', lines.join('\n'));
+
+                        if (result.hasMore) {
+                            self.showToaster('已复制前1000行，更多数据请下载Excel。')
+                        } else {
+                            self.showToaster('查询结果已全部复制到剪贴板。');
+                        }
+                    });
+
                 });
 
             }
@@ -310,6 +339,12 @@ define('explorer/queryEditor/taskStatus', [
                     self.initWebSocket();
                 }, 3000);
             };
+        },
+
+        showToaster: function(content) {
+            var toaster = registry.byId('toaster');
+            toaster.setContent(content);
+            toaster.show();
         },
 
         _theEnd: undefined

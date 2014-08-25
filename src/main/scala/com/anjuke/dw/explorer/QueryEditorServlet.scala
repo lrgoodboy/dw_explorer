@@ -172,15 +172,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
   get("/api/task/output/:id") {
     contentType = formats("json")
-
-    val id = params("id").toLong
-    val limit = params.get("limit") match {
-      case Some(s) => s.toInt
-      case None => 100
-    }
-
-    val (columns, rows, hasMore) = getResult(id, limit)
-
+    val (columns, rows, hasMore) = getResult(params("id").toLong, 1000)
     Map(
       "columns" -> columns,
       "rows" -> rows,

@@ -172,13 +172,6 @@ define('explorer/queryEditor/taskStatus', [
                         return;
                     }
 
-                    /*if (result.rows.length == 0) {
-                        put(pane.domNode, 'div.task-result-header', '返回结果为空');
-                    } else {
-                        var div = put(pane.domNode, 'div.task-result-header', '结果列表（前100条）');
-                        put(div, 'a[href="' + config.contextPath + '/query-editor/api/task/excel/' + task.id + '"][target="_blank"]', '下载Excel');
-                    }*/
-
                     var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
                         columns: result.columns,
                         className: 'grid-fill-container'
@@ -215,6 +208,8 @@ define('explorer/queryEditor/taskStatus', [
                     menu.addChild(new MenuItem({
                         label: '新窗口打开',
                         onClick: function() {
+                            var url = config.contextPath + '/query-editor/task/result/' + task.id;
+                            open(url);
                         }
                     }));
                     menu.addChild(new MenuItem({
@@ -225,6 +220,8 @@ define('explorer/queryEditor/taskStatus', [
                     menu.addChild(new MenuItem({
                         label: '下载Excel',
                         onClick: function() {
+                            var url = config.contextPath + '/query-editor/api/task/excel/' + task.id;
+                            open(url);
                         }
                     }));
                 });

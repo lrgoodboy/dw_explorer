@@ -1,0 +1,80 @@
+<%@ var id: Long %>
+<%@ var result: String %>
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>查询结果[${id}]</title>
+<link rel="stylesheet" href="${uri("/webjars/dojo/1.9.3/dijit/themes/claro/claro.css")}">
+<link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/dgrid.css")}">
+<link rel="stylesheet" href="${uri("/webjars/dgrid/0.3.14/css/skins/claro.css")}">
+<style type="text/css">
+.grid-fill-container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    margin: 8px;
+}
+</style>
+</head>
+<body class="claro">
+
+<div id="gridOutput"></div>
+
+<script type="text/javascript">
+var dojoConfig = {
+    packages: [
+        {name: 'put-selector', location: '${uri("/js/put-selector-0.3.5")}'},
+        {name: 'xstyle', location: '${uri("/js/xstyle-0.1.3")}'},
+        {name: 'dgrid', location: '${uri("/webjars/dgrid/0.3.14")}'}
+    ],
+    contextPath: '${contextPath}'
+};
+var result = ${unescape(result)};
+</script>
+<script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: true, parseOnLoad: true"></script>
+<script type="text/javascript">
+require([
+    'dojo/parser',
+    'dojo/_base/declare',
+    'dojo/_base/array',
+    'dojo/store/Memory',
+    'dgrid/OnDemandGrid',
+    'dgrid/extensions/ColumnResizer',
+    'dojo/domReady!'
+], function(parser, declare, array, Memory, OnDemandGrid, ColumnResizer) {
+
+    // prepare store
+    array.forEach(result.rows, function(row, i) {
+        row['_generatedId'] = i;
+    });
+
+    if (result.hasMore) {
+        var more = {_generatedId: -1};
+        more[result.columns[0].label] = '...';
+        result.rows.push(more);
+    }
+
+    var store = new Memory({
+        idProperty: '_generatedId',
+        data: result.rows
+    });
+
+    var gridOutput = new (declare([OnDemandGrid, ColumnResizer]))({
+        store: store,
+        columns: result.columns,
+        className: 'grid-fill-container'
+    }, 'gridOutput');
+
+
+
+    //gridOutput.renderArray(result.rows);
+});
+</script>
+
+</body>
+</html>

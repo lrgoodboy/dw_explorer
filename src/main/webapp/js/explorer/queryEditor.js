@@ -584,7 +584,7 @@ define('explorer/queryEditor', [
                 }
 
                 var infoGrid  = new Grid({
-                    className: 'dgrid-autoheight',
+                    className: 'dgrid-autoheight grid-table-info',
                     columns: [
                         {label: '数据库', field: 'database', sortable: false},
                         {label: '表名', field: 'table', sortable: false},
@@ -600,7 +600,7 @@ define('explorer/queryEditor', [
                     className: 'dgrid-autoheight',
                     columns: [
                         {label: '字段名', field: 'name', sortable: false},
-                        {label: '类型', field: 'type', sortable: false},
+                        {label: '类型', field: 'dataType', sortable: false},
                         {label: '注释', field: 'comment', sortable: false}
                     ]
                 });

@@ -16,6 +16,9 @@ import org.json4s.jackson.JsonMethods._
 import com.anjuke.dw.explorer.util.Config
 import com.anjuke.dw.explorer.init.RememberMeStrategy
 
+case class Column(name: String, dataType: String, comment: String)
+case class DgridColumn(label: String, field: String, sortable: Boolean = false, width: Int = 40)
+
 object QueryEditorServlet {
 
   val statusMap = Map(
@@ -79,6 +82,29 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
         "version" -> Config("common", "version"),
         "cookieKey" -> RememberMeStrategy.COOKIE_KEY,
         "websocketServer" -> Config("service", "websocket.server"))
+  }
+
+  get("/task/result/:id") {
+    requireRole(User.ROLE_BI)
+
+    val id = params("id").toLong
+    val (columns, rows, hasMore) = getResult(id, 5000)
+
+    val result =
+      ("columns" ->
+        columns.map { column =>
+          ("label" -> column.label) ~
+          ("field" -> column.field) ~
+          ("sortable" -> column.sortable) ~
+          ("width" -> column.width)
+        }) ~
+      ("rows" -> rows) ~
+      ("hasMore" -> hasMore)
+
+    contentType = "text/html"
+    ssp("query-editor/task-result", "layout" -> "",
+        "id" -> id,
+        "result" -> compact(render(result)))
   }
 
   post("/api/task/?") {
@@ -147,7 +173,24 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
   get("/api/task/output/:id") {
     contentType = formats("json")
 
-    val file = new File(TaskActor.outputFile(params("id").toLong))
+    val id = params("id").toLong
+    val limit = params.get("limit") match {
+      case Some(s) => s.toInt
+      case None => 100
+    }
+
+    val (columns, rows, hasMore) = getResult(id, limit)
+
+    Map(
+      "columns" -> columns,
+      "rows" -> rows,
+      "hasMore" -> hasMore
+    )
+  }
+
+  private def getResult(id: Long, limit: Int): Tuple3[List[DgridColumn], List[Map[String, String]], Boolean] = {
+
+    val file = new File(TaskActor.outputFile(id))
     if (!file.exists) {
       halt(NotFound())
     }
@@ -155,21 +198,19 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     val lines = io.Source.fromFile(file).getLines
 
     if (!lines.hasNext) {
-      Map("columns" -> Nil)
+      (Nil, Nil, false)
     } else {
 
-      val columns = lines.next().split("\t").map(label => {
-        Map("label" -> label, "field" -> label, "sortable" -> false)
-      }).toList
-
-      val limit = 100
+      val columns = lines.next().split("\t") map { label =>
+        DgridColumn(label, label)
+      } toList
 
       val rows = if (columns.nonEmpty) {
 
         lines.take(limit).map(line => {
           val cols = line.split("\t")
           val row = for (i <- cols.indices if i < columns.length) yield {
-            (columns(i)("label").asInstanceOf[String], cols(i))
+            (columns(i).label, cols(i))
           }
           row.toMap
         }).toList
@@ -180,7 +221,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
       val columnsWidth = if (rows.nonEmpty) calcColumnsWidth(columns, rows) else columns
 
-      Map("columns" -> columnsWidth, "rows" -> rows, "hasMore" -> hasMore)
+      (columnsWidth, rows, hasMore)
     }
 
   }
@@ -297,11 +338,11 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
           JField("name", JString(name)) <- column
           JField("type", JString(dataType)) <- column
           JField("comment", JString(comment)) <- column
-        } yield Map("name" -> name, "type" -> dataType, "comment" -> comment)
+        } yield Column(name, dataType, comment)
 
         val rows = for (JArray(row) <- result \ "rows") yield {
           val rowData = for (JString(col) <- row) yield col
-          val pairs = for (i <- rowData.indices) yield (columns(i)("name"), rowData(i))
+          val pairs = for (i <- rowData.indices) yield (columns(i).name, rowData(i))
           pairs.toMap
         }
 
@@ -316,15 +357,10 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
           "size" -> size
         ))
 
-        val tableColumns = columns.map(column => {
-          Map(
-            "label" -> column("name"),
-            "field" -> column("name"),
-            "sortable" -> false
-          )
-        })
-
-        val tableColumnsWidth = if (rows.nonEmpty) calcColumnsWidth(tableColumns, rows) else tableColumns
+        val tableColumns = columns map { column =>
+            DgridColumn(column.name, column.name)
+        }
+        val tableColumnsWidth = if (rows.nonEmpty) calcColumnsWidth(tableColumns, rows) else columns
 
         Map(
           "info" -> info,
@@ -448,16 +484,14 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
   private def currentTimestamp = new Timestamp(System.currentTimeMillis)
 
-  private def calcColumnsWidth(columns: List[Map[String, Any]], rows: List[Map[String, String]]) = {
-
-    columns.map(column => {
-      val width = rows.map(_.getOrElse(column("label").asInstanceOf[String], "").length).filter(_ > 0) match {
+  private def calcColumnsWidth(columns: List[DgridColumn], rows: List[Map[String, String]]): List[DgridColumn] = {
+    columns map { column =>
+      val width = rows.map(_.getOrElse(column.label, "").length).filter(_ > 0) match {
         case widthList if widthList.nonEmpty => widthList.sum / widthList.length
         case _ => 0
       }
-      column + ("width" -> (if (width > 5) width else 5) * 8)
-    })
-
+      column.copy(width = (if (width > 5) width else 5) * 8)
+    }
   }
 
   private def replaceParameters(queries: String) = {

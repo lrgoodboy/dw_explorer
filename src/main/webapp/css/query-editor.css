@@ -60,6 +60,10 @@ html, body {
     margin: 8px;
 }
 
+.grid-table-info {
+    margin-bottom: 10px;
+ }
+
 .task-result-header {
     font-weight: bold;
     font-size: 15px;

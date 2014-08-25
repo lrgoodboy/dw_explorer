@@ -35,7 +35,15 @@ object QueryEditorServlet {
       "created" -> dfDateTime.format(task.created),
       "queries" -> task.queries,
       "queriesBrief" -> {
-        if (task.queries.length > 100) task.queries.substring(0, 100) else task.queries
+
+        val ptrnBuffer = "(?i)^(SET|ADD\\s+JAR|CREATE\\s+TEMPORARY\\s+FUNCTION|USE)\\s+".r
+        val queries = task.queries
+                          .replaceAll("(?s)/\\*.*?\\*/", "")
+                          .split(";").map(_.trim).filter(_.nonEmpty)
+                          .filter(ptrnBuffer.findFirstIn(_).isEmpty)
+                          .mkString(";")
+
+        if (queries.length > 100) queries.substring(0, 100) else queries
       },
       "status" -> statusMap(task.status),
       "duration" -> {

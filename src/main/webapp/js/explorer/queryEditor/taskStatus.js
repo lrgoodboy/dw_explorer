@@ -7,6 +7,8 @@ define('explorer/queryEditor/taskStatus', [
     'dojo/request',
     'dojo/json',
     'dojo/cookie',
+    'dojo/query',
+    'dojo/html',
     'dojo/store/Memory',
     'dojo/store/JsonRest',
     'dojo/store/Observable',
@@ -14,13 +16,14 @@ define('explorer/queryEditor/taskStatus', [
     'dijit/layout/ContentPane',
     'dijit/Menu',
     'dijit/MenuItem',
+    'dijit/Dialog',
     'dgrid/Grid',
     'dgrid/OnDemandGrid',
     'dgrid/Selection',
     'dgrid/extensions/ColumnResizer',
     'put-selector/put'
-], function(declare, lang, config, array, ready, request, json, cookie, Memory, JsonRest, Observable,
-            registry, ContentPane, Menu, MenuItem,
+], function(declare, lang, config, array, ready, request, json, cookie, query, html, Memory, JsonRest, Observable,
+            registry, ContentPane, Menu, MenuItem, Dialog,
             Grid, OnDemandGrid, Selection, ColumnResizer,
             put) {
 
@@ -198,6 +201,15 @@ define('explorer/queryEditor/taskStatus', [
                     menu.addChild(new MenuItem({
                         label: '任务信息',
                         onClick: function() {
+                            var dlg = registry.byId('dlgTaskInfo');
+                            dlg.set('title', '任务信息[' + task.id + ']');
+
+                            var tds = query('td', dlg.domNode);
+                            html.set(tds[0], task.created);
+                            html.set(tds[1], task.duration);
+                            html.set(tds[2], task.queries.replace(/\n/g, '<br>'));
+
+                            dlg.show();
                         }
                     }));
                     menu.addChild(new MenuItem({

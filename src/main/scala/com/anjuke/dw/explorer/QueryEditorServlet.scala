@@ -503,6 +503,9 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     // replace udf path
     result = result.replace("/home/hadoop/dwetl/hiveudf/", Config("common", "udf.path"))
 
+    // replace count(*)
+    result = result.replaceAll("(?i)COUNT\\(\\*\\)", "COUNT(1)")
+
     result
   }
 

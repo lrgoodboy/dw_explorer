@@ -36,7 +36,7 @@ var dojoConfig = {
 };
 var result = ${unescape(result)};
 </script>
-<script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="async: true, parseOnLoad: true"></script>
+<script type="text/javascript" src="${uri("/webjars/dojo/1.9.3/dojo/dojo.js")}" data-dojo-config="parseOnLoad: true"></script>
 <script type="text/javascript">
 require([
     'dojo/parser',

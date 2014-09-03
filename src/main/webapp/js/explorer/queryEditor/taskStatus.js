@@ -32,6 +32,11 @@ define('explorer/queryEditor/taskStatus', [
 
         constructor: function() {
             var self = this;
+
+            ZeroClipboard.config({
+                swfPath: config.contextPath + '/webjars/zeroclipboard/2.1.5/ZeroClipboard.swf'
+            });
+
             ready(function() {
                 self.initGrid();
                 self.initWebSocket();

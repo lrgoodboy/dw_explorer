@@ -3,12 +3,10 @@ package com.anjuke.dw.explorer
 import scala.collection.mutable
 import org.fusesource.scalate.TemplateEngine
 import org.fusesource.scalate.layout.DefaultLayoutStrategy
-import org.fusesource.scalate.util.IOUtil
 import org.scalatra.ScalatraServlet
 import org.scalatra.scalate.ScalateSupport
 import javax.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
-import java.io.File
 
 trait DwExplorerStack extends ScalatraServlet with ScalateSupport {
 
@@ -35,15 +33,4 @@ trait DwExplorerStack extends ScalatraServlet with ScalateSupport {
     serveStaticResource() getOrElse resourceNotFound()
   }
 
-  get("/webjars/*") {
-    val resourcePath = "/META-INF/resources/webjars/" + params("splat")
-    Option(getClass.getResourceAsStream(resourcePath)) match {
-      case Some(inputStream) => {
-        response.setContentType(servletContext.getMimeType(resourcePath))
-        IOUtil.copy(inputStream, response.outputStream)
-        Unit
-      }
-      case None => resourceNotFound()
-    }
-  }
 }

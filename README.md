@@ -2,8 +2,11 @@
 
 ## Build & Run ##
 
+Install [Bower][1] first.
+
 ```sh
-$ cd DW_Explorer
+$ cd dw_explorer
+$ bower install
 $ ./sbt
 > container:start
 > browse
@@ -25,6 +28,4 @@ $ ./sbt
 $ ./sbt eclipse
 ```
 
-## TODO
-
-* `./sbt eclipse` make the `src/main/webapps` & `resources` as source folder automatically
+[1]: http://bower.io/

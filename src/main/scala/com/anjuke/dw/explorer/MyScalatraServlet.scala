@@ -12,18 +12,6 @@ class MyScalatraServlet extends DwExplorerStack
 
   val logger = LoggerFactory.getLogger(getClass)
 
-  get("/webjars/*") {
-    val resourcePath = "/META-INF/resources/webjars/" + params("splat")
-    Option(getClass.getResourceAsStream(resourcePath)) match {
-      case Some(inputStream) => {
-        response.setContentType(servletContext.getMimeType(resourcePath))
-        IOUtil.copy(inputStream, response.getOutputStream)
-        Unit
-      }
-      case None => resourceNotFound()
-    }
-  }
-
   get("/") {
     <html>
       <body>

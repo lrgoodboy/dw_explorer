@@ -10,6 +10,7 @@ import com.anjuke.dw.explorer.TaskActor
 import akka.routing.SmallestMailboxRouter
 import com.anjuke.dw.explorer.util.Config
 import com.typesafe.config.ConfigFactory
+import com.anjuke.dw.explorer.WebjarsServlet
 
 class ScalatraBootstrap extends LifeCycle with DatabaseInit {
 
@@ -33,6 +34,9 @@ class ScalatraBootstrap extends LifeCycle with DatabaseInit {
     // It may be not the best way to inject the dependency.
     context.setAttribute("actorSystem", actorSystem)
     context.mount(classOf[QueryTaskServlet], "/query-task/*")
+
+    // webjars
+    context.mount(classOf[WebjarsServlet], "/webjars/*")
   }
 
   override def destroy(context: ServletContext) {

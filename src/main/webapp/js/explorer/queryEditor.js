@@ -568,7 +568,7 @@ define('explorer/queryEditor', [
             bottomCol.selectChild(pane);
 
             var loading = put(pane.domNode, 'div[style="width: 100%; margin: 10px;"]');
-            put(loading, 'img[src="' + config.contextPath + '/webjars/dojo/1.9.3/dijit/themes/claro/images/loadingAnimation.gif"][align="top"]');
+            put(loading, 'img[src="' + config.contextPath + '/js/dijit/themes/claro/images/loadingAnimation.gif"][align="top"]');
             put(loading, 'span', '加载中……');
 
             request(config.contextPath + '/query-editor/api/metadata/desc/', {

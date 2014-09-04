@@ -5,24 +5,11 @@ import org.slf4j.LoggerFactory
 import com.anjuke.dw.explorer.init.DatabaseSessionSupport
 import com.anjuke.dw.explorer.init.AuthenticationSupport
 import com.anjuke.dw.explorer.init.AnjukeAuthStrategy
-import org.fusesource.scalate.util.IOUtil
 
 class MyScalatraServlet extends DwExplorerStack
     with DatabaseSessionSupport with AuthenticationSupport {
 
   val logger = LoggerFactory.getLogger(getClass)
-
-  get("/webjars/*") {
-    val resourcePath = "/META-INF/resources/webjars/" + params("splat")
-    Option(getClass.getResourceAsStream(resourcePath)) match {
-      case Some(inputStream) => {
-        response.setContentType(servletContext.getMimeType(resourcePath))
-        IOUtil.copy(inputStream, response.getOutputStream)
-        Unit
-      }
-      case None => resourceNotFound()
-    }
-  }
 
   get("/") {
     <html>

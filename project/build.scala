@@ -31,7 +31,6 @@ object DwExplorerBuild extends Build {
         "org.eclipse.jetty" % "jetty-webapp" % JettyVersion % "container",
         "org.eclipse.jetty" % "jetty-plus" % JettyVersion % "container",
         "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container;provided;test" artifacts (Artifact("javax.servlet", "jar", "jar")),
-        "org.webjars" % "dojo" % "1.9.3",
         "org.scalatra" %% "scalatra-json" % ScalatraVersion,
         "org.json4s" %% "json4s-jackson" % "3.2.10",
         "org.squeryl" %% "squeryl" % "0.9.5-6",
@@ -39,13 +38,10 @@ object DwExplorerBuild extends Build {
         "c3p0" % "c3p0" % "0.9.1.2",
         "org.scalatra" %% "scalatra-auth" % ScalatraVersion,
         "net.databinder.dispatch" %% "dispatch-core" % "0.11.1",
-        "org.webjars" % "dgrid" % "0.3.14",
         "org.apache.poi" % "poi-ooxml" % "3.10-FINAL",
         "commons-configuration" % "commons-configuration" % "1.10",
-        "org.webjars" % "codemirror" % "4.2",
         "org.eclipse.jetty" % "jetty-websocket" % JettyVersion % "container;compile",
-        "com.typesafe.akka" %% "akka-remote" % "2.1.2",
-        "org.webjars" % "zeroclipboard" % "2.1.5"
+        "com.typesafe.akka" %% "akka-remote" % "2.1.2"
       ),
       scalateTemplateConfig in Compile <<= (sourceDirectory in Compile){ base =>
         Seq(

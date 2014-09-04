@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory
 import com.anjuke.dw.explorer.init.DatabaseSessionSupport
 import com.anjuke.dw.explorer.init.AuthenticationSupport
 import com.anjuke.dw.explorer.init.AnjukeAuthStrategy
-import org.fusesource.scalate.util.IOUtil
 
 class MyScalatraServlet extends DwExplorerStack
     with DatabaseSessionSupport with AuthenticationSupport {

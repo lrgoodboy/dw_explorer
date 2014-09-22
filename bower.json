@@ -9,9 +9,9 @@
     "dgrid": "0.3.14",
     "codemirror": "4.2",
     "zeroclipboard": "2.1.5",
-    "dojo": "1.9.3",
-    "dijit": "1.9.3",
-    "dojox": "1.9.3"
+    "dojo": "1.10.1",
+    "dijit": "1.10.1",
+    "dojox": "1.10.1"
   }
 }
 

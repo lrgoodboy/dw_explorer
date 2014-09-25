@@ -22,7 +22,7 @@ case class TaskEvent(val task: Task)
 object TaskActor {
 
   val HIVE_SERVER_URL = Config("service", "dw.hiveserver.url")
-  val TASK_FOLDER = "/data2/dw_explorer/query/task"
+  val TASK_FOLDER = Config("common", "task.folder")
 
   def outputFile(taskId: Long) = s"$TASK_FOLDER/query_task_$taskId.out"
   def errorFile(taskId: Long) = s"$TASK_FOLDER/query_task_$taskId.err"

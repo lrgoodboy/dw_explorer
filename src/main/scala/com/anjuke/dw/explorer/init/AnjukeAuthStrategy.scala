@@ -51,10 +51,22 @@ class AnjukeAuthStrategy(protected val app: ScalatraBase, protected val scentryC
 
             case None =>
               logger.info("create user: " + username)
+
+              // judge role
+              val role = if ((userInfo \ "function_id").extract[String] == "11") {
+                if ((userInfo \ "department_name").extract[String] contains "DW") {
+                  User.ROLE_DW
+                } else {
+                  User.ROLE_BI
+                }
+              } else {
+                User.ROLE_GUEST
+              }
+
               val user = new User(username = username,
                                   truename = (userInfo \ "chinese_name").extract[String],
                                   email = (userInfo \ "email").extract[String],
-                                  role = User.ROLE_BI,
+                                  role = role,
                                   created = new Timestamp(System.currentTimeMillis))
               User.create(user)
           }

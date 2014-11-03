@@ -132,7 +132,6 @@ class TaskActor(actorSystem: ActorSystem) extends Actor {
               val outputReq = dispatch.url(HIVE_SERVER_URL) / "task" / "output" / remoteTaskId
               val outputFuture = Http(outputReq > { res =>
                 IOUtils.copy(res.getResponseBodyAsStream(), outputStream)
-                outputStream.write("\n".getBytes)
               })
               outputFuture()
 

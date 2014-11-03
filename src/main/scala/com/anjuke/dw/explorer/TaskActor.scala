@@ -16,6 +16,8 @@ import akka.util.Timeout
 import akka.pattern.ask
 import scala.concurrent.duration._
 import scala.concurrent.{Await, TimeoutException}
+import org.apache.poi.util.IOUtils
+import java.io.FileOutputStream
 
 case class TaskEvent(val task: Task)
 
@@ -125,17 +127,16 @@ class TaskActor(actorSystem: ActorSystem) extends Actor {
           result \ "taskStatus" match {
             case JString("ok") => {
 
-              // read standard output
-              val outputWriter = new FileWriter(outputFile(taskId), true)
+              val outputStream = new FileOutputStream(outputFile(taskId), true)
 
               val outputReq = dispatch.url(HIVE_SERVER_URL) / "task" / "output" / remoteTaskId
-              val outputFuture = Http(outputReq > as.stream.Lines(line => {
-                outputWriter.write(line)
-                outputWriter.write("\n")
-              }))
+              val outputFuture = Http(outputReq > { res =>
+                IOUtils.copy(res.getResponseBodyAsStream(), outputStream)
+                outputStream.write("\n".getBytes)
+              })
               outputFuture()
 
-              outputWriter.close
+              outputStream.close
             }
 
             case JString("error") => throw new Exception((result \ "taskErrorMessage").extract[String])

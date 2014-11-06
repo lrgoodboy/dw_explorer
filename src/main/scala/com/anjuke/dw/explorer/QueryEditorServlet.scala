@@ -75,6 +75,10 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     requireLogin()
   }
 
+  get("/") {
+    redirect("/query-editor/index")
+  }
+
   get("/index") {
     requireRole(User.ROLE_BI)
     contentType = "text/html"

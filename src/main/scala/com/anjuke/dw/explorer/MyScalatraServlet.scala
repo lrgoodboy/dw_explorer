@@ -12,6 +12,10 @@ class MyScalatraServlet extends DwExplorerStack
   val logger = LoggerFactory.getLogger(getClass)
 
   get("/") {
+    redirect("/query-editor/")
+  }
+
+  get("/hello") {
     <html>
       <body>
         <h1>Hello, world!</h1>

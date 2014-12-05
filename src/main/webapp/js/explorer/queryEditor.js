@@ -623,7 +623,13 @@ define('explorer/queryEditor', [
         udfList: [
             {name: 'SUBSTRING_INDEX', jar: 'SubStringIndexUDF.jar', clazz: 'com.anjuke.dw.hive.udf.SubStringIndex'},
             {name: 'RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
-            {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'}
+            {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'},
+            {name: 'DW_RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
+            {name: 'GetJsonObj', jar: 'GetJsonObj.jar', clazz: 'com.anjuke.dw.hive.udf.GetJsonObj'},
+            {name: 'RowSeq', jar: 'RowSeqUDF.jar', clazz: 'com.anjuke.dw.hive.udf.RowSeq'},
+            {name: 'UserAgentParser', jar: 'UserAgentParserUDF.jar', clazz: 'com.anjuke.dw.hive.udf.UserAgentParser'},
+            {name: 'UrlUnescape', jar: 'UrlUnescape.jar', clazz: 'com.anjuke.dw.hive.udf.UrlUnescape'},
+            {name: 'GREATEST', jar: 'UDFGreatest.jar', clazz: 'com.anjuke.dw.hive.udf.UDFGreatest'}
         ],
 
         formatOptionUdf: function(name) {

@@ -8,6 +8,7 @@ define('explorer/queryEditor', [
     'dojo/html',
     'dojo/dom-style',
     'dojo/dom-attr',
+    'dojo/dom-construct',
     'dojo/on',
     'dojo/date/locale',
     'dojo/promise/all',
@@ -41,7 +42,7 @@ define('explorer/queryEditor', [
     'cm/lib/codemirror',
     'cm/mode/sql/sql',
     'explorer/queryEditor/taskStatus'
-], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, on, date, all, has,
+], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, domConstruct, on, date, all, has,
             request, json, Memory, JsonRest, Observable,
             registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button,
             CheckBox, NumberSpinner, Toolbar, ToolbarSeparator, Fieldset,
@@ -731,6 +732,13 @@ define('explorer/queryEditor', [
             });
 
             self.readOptions();
+
+            // help
+            var helpHtml = '<div class="option-help">'
+                         + '<i class="icon-help"></i>'
+                         + ' <a href="http://gitlab.corp.anjuke.com/_bi/dw_team/blob/master/技术文档/DWMS帮助文档/Explorer查询编辑器.md" target="_blank">帮助信息</a>'
+                         + '</div>';
+            domConstruct.place(helpHtml, pane.containerNode);
         },
 
         getOptions: function() {

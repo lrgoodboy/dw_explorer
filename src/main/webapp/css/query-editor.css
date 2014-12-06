@@ -148,3 +148,24 @@ ul.option-list a:hover {
 #dlgTaskInfo td {
     word-break: break-all;
 }
+
+div.option-help {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+div.option-help i {
+  display: inline-block;
+  vertical-align: top;
+}
+
+div.option-help a {
+  text-decoration: none;
+  color: black;
+  line-height: 20px;
+}
+
+div.option-help a:hover {
+  text-decoration: underline;
+}

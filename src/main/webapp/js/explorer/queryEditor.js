@@ -8,6 +8,7 @@ define('explorer/queryEditor', [
     'dojo/html',
     'dojo/dom-style',
     'dojo/dom-attr',
+    'dojo/dom-construct',
     'dojo/on',
     'dojo/date/locale',
     'dojo/promise/all',
@@ -41,7 +42,7 @@ define('explorer/queryEditor', [
     'cm/lib/codemirror',
     'cm/mode/sql/sql',
     'explorer/queryEditor/taskStatus'
-], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, on, date, all, has,
+], function(declare, lang, config, array, ready, query, html, domStyle, domAttr, domConstruct, on, date, all, has,
             request, json, Memory, JsonRest, Observable,
             registry, ContentPane, LayoutContainer, Tree, ObjectStoreModel, Menu, MenuItem, Select, TextBox, Button,
             CheckBox, NumberSpinner, Toolbar, ToolbarSeparator, Fieldset,
@@ -623,7 +624,13 @@ define('explorer/queryEditor', [
         udfList: [
             {name: 'SUBSTRING_INDEX', jar: 'SubStringIndexUDF.jar', clazz: 'com.anjuke.dw.hive.udf.SubStringIndex'},
             {name: 'RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
-            {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'}
+            {name: 'MD5', jar: 'MD5UDF.jar', clazz: 'com.anjuke.dw.hive.udf.MD5'},
+            {name: 'DW_RANK', jar: 'RankUDF.jar', clazz: 'com.anjuke.dw.hive.udf.Rank'},
+            {name: 'GetJsonObj', jar: 'GetJsonObj.jar', clazz: 'com.anjuke.dw.hive.udf.GetJsonObj'},
+            {name: 'RowSeq', jar: 'RowSeqUDF.jar', clazz: 'com.anjuke.dw.hive.udf.RowSeq'},
+            {name: 'UserAgentParser', jar: 'UserAgentParserUDF.jar', clazz: 'com.anjuke.dw.hive.udf.UserAgentParser'},
+            {name: 'UrlUnescape', jar: 'UrlUnescape.jar', clazz: 'com.anjuke.dw.hive.udf.UrlUnescape'},
+            {name: 'GREATEST', jar: 'UDFGreatest.jar', clazz: 'com.anjuke.dw.hive.udf.UDFGreatest'}
         ],
 
         formatOptionUdf: function(name) {
@@ -725,6 +732,13 @@ define('explorer/queryEditor', [
             });
 
             self.readOptions();
+
+            // help
+            var helpHtml = '<div class="option-help">'
+                         + '<i class="icon-help"></i>'
+                         + ' <a href="http://gitlab.corp.anjuke.com/_bi/dw_team/blob/master/技术文档/DWMS帮助文档/Explorer查询编辑器.md" target="_blank">帮助信息</a>'
+                         + '</div>';
+            domConstruct.place(helpHtml, pane.containerNode);
         },
 
         getOptions: function() {

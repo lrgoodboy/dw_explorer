@@ -506,13 +506,13 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
       ("sevenDaysBefore", () => q(DwDate.nDaysAgo(7)))
     )
 
-    var result = queries
-    parameters.foreach {
-      case (p, v) =>
-        val param = "${" + p + "}"
-        if (result contains param) {
-          result = result.replace(param, v())
-        }
+    var result = parameters.foldLeft(queries) { case (queries, (p, v)) =>
+      val param = "${" + p + "}"
+      if (queries contains param) {
+        queries.replace(param, v())
+      } else {
+        queries
+      }
     }
 
     // replace udf path

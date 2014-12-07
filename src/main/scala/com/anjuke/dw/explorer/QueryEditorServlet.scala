@@ -521,6 +521,9 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     // replace count(*)
     result = result.replaceAll("(?i)COUNT\\(\\*\\)", "COUNT(1)")
 
+    // replace semi-colon
+    result = result.replace("';'", "'\\073'")
+
     result
   }
 

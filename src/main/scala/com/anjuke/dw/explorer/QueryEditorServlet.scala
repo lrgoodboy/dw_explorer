@@ -494,22 +494,25 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     def q(v: String) = "'" + v + "'"
 
     val parameters = Map(
-      "dealDate" -> q(DwDate.dealDate),
-      "outFileSuffix" -> DwDate.dealDate,
-      "dateSuffix" -> DwDate.dealDate.replace("-", ""),
-      "monthId" -> q(DwDate.monthId),
-      "monthBegin" -> q(DwDate.monthBegin),
-      "monthEnd" -> q(DwDate.monthEnd),
-      "weekId" -> q(DwDate.weekId),
-      "weekBegin" -> q(DwDate.weekBegin),
-      "weekEnd" -> q(DwDate.weekEnd),
-      "sevenDaysBefore" -> q(DwDate.nDaysAgo(7))
+      ("dealDate", () => q(DwDate.dealDate)),
+      ("outFileSuffix", () => DwDate.dealDate),
+      ("dateSuffix", () => DwDate.dealDate.replace("-", "")),
+      ("monthId", () => q(DwDate.monthId)),
+      ("monthBegin", () => q(DwDate.monthBegin)),
+      ("monthEnd", () => q(DwDate.monthEnd)),
+      ("weekId", () => q(DwDate.weekId)),
+      ("weekBegin", () => q(DwDate.weekBegin)),
+      ("weekEnd", () => q(DwDate.weekEnd)),
+      ("sevenDaysBefore", () => q(DwDate.nDaysAgo(7)))
     )
 
     var result = queries
     parameters.foreach {
       case (p, v) =>
-        result = result.replace("${" + p + "}", v)
+        val param = "${" + p + "}"
+        if (result contains param) {
+          result = result.replace(param, v())
+        }
     }
 
     // replace udf path

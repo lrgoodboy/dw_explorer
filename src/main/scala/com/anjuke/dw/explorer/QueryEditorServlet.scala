@@ -6,14 +6,13 @@ import com.anjuke.dw.explorer.init.AuthenticationSupport
 import com.anjuke.dw.explorer.models.{Task, Doc, User}
 import java.sql.Timestamp
 import akka.actor.ActorRef
-import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
 import org.scalatra.{BadRequest, InternalServerError, NotFound}
 import java.io.File
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
-import com.anjuke.dw.explorer.util.Config
+import com.anjuke.dw.explorer.util._
 import com.anjuke.dw.explorer.init.RememberMeStrategy
 
 case class Column(name: String, dataType: String, comment: String)
@@ -492,16 +491,28 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
 
   private def replaceParameters(queries: String) = {
 
+    def q(v: String) = "'" + v + "'"
+
     val parameters = Map(
-      "dealDate" -> ("'" + dealDate + "'"),
-      "outFileSuffix" -> dealDate,
-      "dateSuffix" -> dealDate.replace("-", "")
+      ("dealDate", () => q(DwDate.dealDate)),
+      ("outFileSuffix", () => DwDate.dealDate),
+      ("dateSuffix", () => DwDate.dealDate.replace("-", "")),
+      ("monthId", () => q(DwDate.monthId)),
+      ("monthBegin", () => q(DwDate.monthBegin)),
+      ("monthEnd", () => q(DwDate.monthEnd)),
+      ("weekId", () => q(DwDate.weekId)),
+      ("weekBegin", () => q(DwDate.weekBegin)),
+      ("weekEnd", () => q(DwDate.weekEnd)),
+      ("sevenDaysBefore", () => q(DwDate.nDaysAgo(7)))
     )
 
-    var result = queries
-    parameters.foreach {
-      case (p, v) =>
-        result = result.replace("${" + p + "}", v)
+    var result = parameters.foldLeft(queries) { case (queries, (p, v)) =>
+      val param = "${" + p + "}"
+      if (queries contains param) {
+        queries.replace(param, v())
+      } else {
+        queries
+      }
     }
 
     // replace udf path
@@ -511,12 +522,6 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     result = result.replaceAll("(?i)COUNT\\(\\*\\)", "COUNT(1)")
 
     result
-  }
-
-  private def dealDate = {
-    val cal = Calendar.getInstance
-    cal.add(Calendar.DATE, -1)
-    new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime)
   }
 
 }

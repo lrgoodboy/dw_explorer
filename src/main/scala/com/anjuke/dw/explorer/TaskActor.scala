@@ -148,7 +148,7 @@ class TaskActor(actorSystem: ActorSystem) extends Actor {
                     metaWriter.write("\n")
                     metaWriter.close
 
-                  case JString("error") => throw new Exception("Fail to fetch task meta - " + (result \ "msg").extract[String])
+                  case JString("error") => throw new Exception("Fail to fetch task meta - " + (meta \ "msg").extract[String])
                   case _ => throw new Exception("Unkown meta status.")
                 }
               }

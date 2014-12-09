@@ -28,6 +28,7 @@ object TaskActor {
 
   def outputFile(taskId: Long) = s"$TASK_FOLDER/query_task_$taskId.out"
   def errorFile(taskId: Long) = s"$TASK_FOLDER/query_task_$taskId.err"
+  def metaFile(taskId: Long) = s"$TASK_FOLDER/query_task_$taskId.meta"
 
 }
 
@@ -127,15 +128,31 @@ class TaskActor(actorSystem: ActorSystem) extends Actor {
           result \ "taskStatus" match {
             case JString("ok") => {
 
-              val outputStream = new FileOutputStream(outputFile(taskId), true)
-
+              // result
               val outputReq = dispatch.url(HIVE_SERVER_URL) / "task" / "output" / remoteTaskId
               val outputFuture = Http(outputReq > { res =>
-                IOUtils.copy(res.getResponseBodyAsStream(), outputStream)
+                val out = new FileOutputStream(outputFile(taskId), true)
+                IOUtils.copy(res.getResponseBodyAsStream(), out)
+                out.close
               })
               outputFuture()
 
-              outputStream.close
+              // meta
+              val metaReq = dispatch.url(HIVE_SERVER_URL) / "task" / "meta" / remoteTaskId
+              val metaFuture = Http(metaReq OK as.String) map { metaJson =>
+                val meta = parse(metaJson)
+                meta \ "status" match {
+                  case JString("ok") =>
+                    val metaWriter = new FileWriter(metaFile(taskId), true)
+                    metaWriter.write((meta \ "meta").extract[String])
+                    metaWriter.write("\n")
+                    metaWriter.close
+
+                  case JString("error") => throw new Exception("Fail to fetch task meta - " + (result \ "msg").extract[String])
+                  case _ => throw new Exception("Unkown meta status.")
+                }
+              }
+              metaFuture()
             }
 
             case JString("error") => throw new Exception((result \ "taskErrorMessage").extract[String])

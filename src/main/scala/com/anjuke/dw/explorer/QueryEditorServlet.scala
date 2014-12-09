@@ -14,6 +14,7 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import com.anjuke.dw.explorer.util._
 import com.anjuke.dw.explorer.init.RememberMeStrategy
+import org.apache.poi.util.IOUtils
 
 case class Column(name: String, dataType: String, comment: String)
 case class DgridColumn(label: String, field: String, sortable: Boolean = false, width: Int = 40)
@@ -227,21 +228,28 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     import org.apache.poi.xssf.streaming.SXSSFWorkbook
 
     val id = params("id").toLong
-
-    val file = new File(TaskActor.outputFile(id))
-    if (!file.exists) {
-      halt(NotFound())
+    val (lines, columns) = try {
+      val lines = io.Source.fromFile(TaskActor.outputFile(id)).getLines
+      val columns = lines.next.split("\t")
+      columns(0).charAt(0) // check
+      (lines, columns)
+    } catch {
+      case _: Exception => halt(NotFound())
     }
 
-    val lines = io.Source.fromFile(file).getLines
-
-    if (!lines.hasNext) {
-      halt(NotFound())
-    }
-
-    val columns = lines.next.split("\t")
-    if (columns.isEmpty) {
-      halt(NotFound())
+    // parse meta
+    val ptrnNumeric = "(?i)INT|FLOAT|DOUBLE|DECIMAL".r
+    val numericColumns: Set[String] = try {
+      val metaJson = io.Source.fromFile(TaskActor.metaFile(id)).getLines.next
+      val names = for {
+        JObject(column) <- parse(metaJson) \ "columns"
+        JField("name", JString(name)) <- column
+        JField("dataType", JString(dataType)) <- column
+        if ptrnNumeric.findFirstIn(dataType).nonEmpty
+      } yield name
+      names.toSet
+    } catch {
+      case _: Exception => Set()
     }
 
     val wb = new SXSSFWorkbook
@@ -257,10 +265,18 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
     for (line <- lines if line.nonEmpty) {
         val row = sheet.createRow(rowIndex)
 
-        val columns = line.split("\t")
-        for (columnIndex <- columns.indices) {
+        val values = line.split("\t")
+        for (columnIndex <- columns.indices.take(values.length)) {
           val cell = row.createCell(columnIndex)
-          cell.setCellValue(columns(columnIndex))
+          if (numericColumns contains columns(columnIndex)) {
+            try {
+              cell.setCellValue(values(columnIndex).toDouble)
+            } catch {
+              case _: Exception => cell.setCellValue(values(columnIndex))
+            }
+          } else {
+            cell.setCellValue(values(columnIndex))
+          }
         }
 
         rowIndex += 1

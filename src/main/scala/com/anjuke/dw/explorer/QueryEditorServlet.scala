@@ -318,7 +318,7 @@ class QueryEditorServlet(taskActor: ActorRef) extends DwExplorerStack
         tables()
 
       case None =>
-        Seq("dw_db", "dw_stage", "dw_extract", "dw_db_temp", "dw_db_test").map(database => {
+        Seq("dw_db", "dw_stage", "dw_extract", "dw_db_temp", "dw_db_test", "nrt_db").map(database => {
           Map("id" -> database, "name" -> database)
         }).toList
     }

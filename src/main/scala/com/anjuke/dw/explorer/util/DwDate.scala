@@ -37,7 +37,7 @@ object DwDate {
     } else {
       cal.get(Calendar.WEEK_OF_YEAR)
     }
-    dt.substring(0, 4) + "W" + week
+    "%sW%02d".format(dt.substring(0, 4), week)
   }
 
   def weekBegin: String = {
